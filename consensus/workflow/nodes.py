@@ -16,7 +16,7 @@ from consensus.agents import (
     EstimatorAgent,
 )
 from consensus.agents.base import AgentConfig
-from consensus.models.lite_llm_client import LiteLLMClient
+from consensus.models.llm_client import LLMClient
 from consensus.ui import (
     display_agent_spawn,
     display_agent_thinking,
@@ -33,10 +33,10 @@ class ResearchNodes:
     def __init__(
         self,
         config: Dict[str, Any],
-        llm_client: Optional[LiteLLMClient] = None,
+        llm_client: Optional[LLMClient] = None,
     ):
         self.config = config
-        self.llm_client = llm_client or LiteLLMClient(config)
+        self.llm_client = llm_client or LLMClient(config)
         self._init_agents()
 
     def _init_agents(self):

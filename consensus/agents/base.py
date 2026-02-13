@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
 from pydantic import BaseModel, Field
 
-from consensus.models.lite_llm_client import LiteLLMClient
+from consensus.models.llm_client import LLMClient
 from consensus.ui import display_agent_thinking
 
 
@@ -39,7 +39,7 @@ class BaseAgent(ABC):
     def __init__(
         self,
         config: AgentConfig,
-        llm_client: Optional[LiteLLMClient] = None,
+        llm_client: Optional[LLMClient] = None,
     ):
         self.config = config
         self.name = config.name

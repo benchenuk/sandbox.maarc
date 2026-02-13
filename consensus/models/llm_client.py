@@ -1,6 +1,7 @@
 """
-LiteLLM Client
-Unified interface for LLM calls via LangChain (OpenAI-compatible)
+LLM Client
+Unified interface for LLM calls via OpenAI-compatible API
+Supports any provider with OpenAI-compatible endpoints (LiteLLM, Ollama, etc.)
 """
 
 import logging
@@ -25,10 +26,11 @@ logging.basicConfig(
 logger = logging.getLogger("consensus.llm")
 
 
-class LiteLLMClient:
+class LLMClient:
     """
     Unified client for LLM providers.
-    Uses LangChain's ChatOpenAI with a proxy endpoint for OpenAI-compatible API.
+    Uses LangChain's ChatOpenAI with OpenAI-compatible endpoints.
+    Works with LiteLLM proxy, Ollama, OpenRouter, or direct OpenAI.
     """
 
     def __init__(self, config: Dict[str, Any]):
@@ -85,8 +87,8 @@ class LiteLLMClient:
         llm = self._get_llm(model, temperature, max_tokens)
 
         messages = []
+        from langchain_core.messages import HumanMessage, SystemMessage
         if system_prompt:
-            from langchain_core.messages import HumanMessage, SystemMessage
             messages.append(SystemMessage(content=system_prompt))
         messages.append(HumanMessage(content=prompt))
 

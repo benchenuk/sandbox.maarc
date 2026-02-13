@@ -12,7 +12,7 @@ from langgraph.checkpoint.memory import MemorySaver
 
 from consensus.workflow.state import ResearchState
 from consensus.workflow.nodes import ResearchNodes
-from consensus.models.lite_llm_client import LiteLLMClient
+from consensus.models.llm_client import LLMClient
 from consensus.ui import (
     console,
     display_iteration_header,
@@ -29,7 +29,7 @@ class ResearchGraph:
 
     def __init__(self, config: Dict[str, Any]):
         self.config = config
-        self.llm_client = LiteLLMClient(config)
+        self.llm_client = LLMClient(config)
         self.nodes = ResearchNodes(config, self.llm_client)
         self.graph = self._build_graph()
 

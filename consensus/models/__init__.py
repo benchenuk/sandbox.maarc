@@ -3,6 +3,6 @@ Models Module
 LLM client implementations
 """
 
-from consensus.models.lite_llm_client import LiteLLMClient
+from consensus.models.llm_client import LLMClient
 
-__all__ = ["LiteLLMClient"]
+__all__ = ["LLMClient"]

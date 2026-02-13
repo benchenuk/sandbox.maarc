@@ -17,92 +17,195 @@ research:
   consensus_threshold: 0.85
   stability_threshold: 0.9
 
+# ============================================================================
+# Orchestrator Configuration (The "Brain")
+# ============================================================================
+# The Orchestrator is the central controller that:
+# - Analyzes topics and generates expert teams
+# - Evaluates agent outputs and detects conflicts
+# - Routes information between agents
+# - Decides when consensus is reached
+# 
+# Due to its meta-reasoning role, it typically needs a capable model.
+
+orchestrator:
+  # Model for team generation and strategic decisions
+  model: gpt-4o
+  provider: litellm_proxy  # Which provider pool entry to use
+  temperature: 0.7
+  
+  # Reasoning capabilities (future feature)
+  # enable_chain_of_thought: true
+  # enable_self_critique: true
+  
+  # Team generation settings (Iteration 2+)
+  team_generation:
+    min_agents: 3
+    max_agents: 5
+    require_skeptic: true  # Always include a critic/skeptic role
+    
+  # Conflict detection settings (Iteration 4+)
+  conflict_detection:
+    enabled: false  # Future: enable LLM-based conflict analysis
+    sensitivity: "medium"  # low, medium, high
+
+# ============================================================================
+# Model Provider Configuration
+# ============================================================================
+# The system supports multiple LLM providers through a provider pool.
+# Future iterations will implement routing strategies (round-robin, 
+# specialty-based, cost-optimized, etc.)
+
 models:
-  # LiteLLM Proxy Settings
-  # All LLM calls go through this OpenAI-compatible endpoint
-  proxy:
-    api_base: "http://localhost:4000"  # Your LiteLLM proxy URL or OpenAI-compatible endpoint
-    api_key: ""  # Set via OPENAI_API_KEY env var or enter here (not recommended for shared configs)
+  # --------------------------------------------------------------------------
+  # Provider Pool - Define all available LLM endpoints
+  # The system can route to any of these providers dynamically
+  # --------------------------------------------------------------------------
+  providers:
+    # Option 1: LiteLLM Proxy (unified endpoint for multiple backends)
+    litellm_proxy:
+      enabled: true
+      api_base: "http://localhost:4000"
+      api_key: ""  # Set via OPENAI_API_KEY env var or enter here
+      default_model: "gpt-4o"
+      
+    # Option 2: Direct OpenAI
+    openai:
+      enabled: false
+      api_base: "https://api.openai.com/v1"
+      api_key: ""  # Set via OPENAI_API_KEY env var
+      default_model: "gpt-4o"
+      
+    # Option 3: Local/Ollama
+    ollama:
+      enabled: false
+      api_base: "http://localhost:11434/v1"
+      api_key: "ollama"  # Ollama doesn't require a real key
+      default_model: "llama3"
+      
+    # Option 4: OpenRouter
+    openrouter:
+      enabled: false
+      api_base: "https://openrouter.ai/api/v1"
+      api_key: ""  # Set via OPENROUTER_API_KEY env var
+      default_model: "openai/gpt-4o"
 
-  # Default model (used if agent-specific model not specified)
+  # --------------------------------------------------------------------------
+  # Active Provider
+  # Which provider from the pool to use (until routing strategy is implemented)
+  # --------------------------------------------------------------------------
+  active_provider: "litellm_proxy"
+  
+  # --------------------------------------------------------------------------
+  # Routing Strategy (Future Feature)
+  # How to select from multiple providers:
+  #   - "single": Use active_provider only (current implementation)
+  #   - "round_robin": Rotate through enabled providers
+  #   - "specialty": Route based on agent role (e.g., coding tasks → coding model)
+  #   - "cost_optimized": Select cheapest provider for the task
+  #   - "performance": Select fastest/lowest-latency provider
+  # --------------------------------------------------------------------------
+  routing_strategy: "single"
+  
+  # --------------------------------------------------------------------------
+  # Default Model
+  # Fallback model if agent-specific model not specified
+  # Can use provider prefix format: "provider/model_name"
+  # --------------------------------------------------------------------------
   default_model: gpt-4o
-
-  # Per-agent model assignment
-  # Each agent can use a different model/temperature
-  # Temperature guide:
-  #   - Lower (0.1-0.3): More focused, deterministic (good for Architect)
-  #   - Medium (0.5-0.7): Balanced (good for Researcher, Orchestrator)
-  #   - Higher (0.8-1.0): More creative (good for Critic)
-  agents:
-    orchestrator:
-      model: gpt-4o
-      temperature: 0.7
+  
+  # --------------------------------------------------------------------------
+  # Dynamically Generated Agents (Iteration 2+)
+  # --------------------------------------------------------------------------
+  # The Orchestrator generates domain-specific agents for each research topic.
+  # These defaults apply to dynamically created agents by their role category.
+  # 
+  # Note: The Orchestrator has its own dedicated config section above.
+  # --------------------------------------------------------------------------
+  agent_defaults:
+    # Default for research/analysis agents
     researcher:
       model: gpt-4o
       temperature: 0.5
+      
+    # Default for critique/skeptic agents  
     critic:
       model: gpt-4o
-      temperature: 0.9  # Higher for creative critique
-    architect:
+      temperature: 0.8
+      
+    # Default for synthesis/reporting
+    synthesizer:
       model: gpt-4o
-      temperature: 0.3  # Lower for precise synthesis
-    estimator:
-      model: gpt-4o
-      temperature: 0.5
+      temperature: 0.3
 
+# ============================================================================
+# Output Configuration
+# ============================================================================
 output:
   format: markdown
   directory: reports
   include_raw_transcripts: false  # Set to true to include full agent outputs in report
 
+# ============================================================================
+# Human-in-the-Loop Configuration
+# ============================================================================
 human_in_the_loop:
   enabled: true
   checkpoint_frequency: every_cycle  # Options: every_cycle, end_only, manual
   pause_on_conflicts: true  # Pause when agents disagree significantly
 
-# CLI Display settings
+# ============================================================================
+# CLI Display Settings
+# ============================================================================
 ui:
   show_spinner: true
   color_enabled: true
   verbose: false  # Set to true for detailed API call logging
 
 # ============================================================================
-# Example: Using different providers per agent
+# Example Configurations
 # ============================================================================
-# models:
-#   proxy:
-#     api_base: "https://api.openai.com/v1"
-#     api_key: ""  # Set via OPENAI_API_KEY env var
-#   
-#   agents:
-#     orchestrator:
-#       model: gpt-4o
-#       temperature: 0.7
-#     researcher:
-#       model: claude-3-sonnet-20240229  # Via LiteLLM proxy routing
-#       temperature: 0.5
-#     critic:
-#       model: gpt-4-turbo
-#       temperature: 0.9
-#     architect:
-#       model: gpt-4o
-#       temperature: 0.3
-#     estimator:
-#       model: claude-3-haiku-20240307  # Faster, cheaper for estimation
-#       temperature: 0.5
 
-# ============================================================================
-# Example: Local model via Ollama
-# ============================================================================
+# --- Example 1: Local Development with Ollama ---
 # models:
-#   proxy:
-#     api_base: "http://localhost:11434/v1"  # Ollama OpenAI-compatible endpoint
-#     api_key: "ollama"  # Ollama doesn't require a real key
-#   
-#   default_model: llama3
-#   
+#   providers:
+#     ollama:
+#       enabled: true
+#       api_base: "http://localhost:11434/v1"
+#       api_key: "ollama"
+#       default_model: "llama3"
+#   active_provider: "ollama"
+#   default_model: "llama3"
+
+# --- Example 2: Using OpenRouter for Cost Optimization ---
+# models:
+#   providers:
+#     openrouter:
+#       enabled: true
+#       api_base: "https://openrouter.ai/api/v1"
+#       api_key: "${OPENROUTER_API_KEY}"
+#       default_model: "openrouter/automatic"  # OpenRouter picks cheapest
+#   active_provider: "openrouter"
+#   default_model: "google/gemma-7b-it:free"  # Use free tier
+
+# --- Example 3: Multi-Provider Setup (Future Routing) ---
+# models:
+#   providers:
+#     litellm_proxy:
+#       enabled: true
+#       api_base: "http://localhost:4000"
+#       api_key: ""
+#       default_model: "gpt-4o"
+#     ollama:
+#       enabled: true
+#       api_base: "http://localhost:11434/v1"
+#       api_key: "ollama"
+#       default_model: "llama3"
+#   active_provider: "litellm_proxy"
+#   routing_strategy: "specialty"
+#   default_model: "gpt-4o"
 #   agents:
 #     orchestrator:
-#       model: llama3
-#       temperature: 0.7
-#     # ... configure other agents similarly
+#       model: "litellm_proxy/gpt-4o"
+#     default_critic:
+#       model: "ollama/llama3"  # Local model for cost saving on critiques

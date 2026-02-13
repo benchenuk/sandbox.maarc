@@ -8,10 +8,10 @@ __author__ = "Consensus-CLI Team"
 
 from consensus.workflow.graph import ResearchGraph
 from consensus.agents.base import BaseAgent
-from consensus.models.lite_llm_client import LiteLLMClient
+from consensus.models.llm_client import LLMClient
 
 __all__ = [
     "ResearchGraph",
     "BaseAgent",
-    "LiteLLMClient",
+    "LLMClient",
 ]
