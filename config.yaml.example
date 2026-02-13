@@ -1,0 +1,108 @@
+# Consensus-CLI Configuration File
+# Copy this file to config.yaml and customize for your setup
+# DO NOT commit config.yaml if it contains API keys
+
+app:
+  name: Consensus-CLI
+  version: 0.1.0
+
+research:
+  # Iteration settings
+  # default_iterations: Number of debate cycles to run
+  # min_iterations: Minimum cycles before allowing early exit
+  # max_iterations: Hard limit to prevent infinite loops
+  default_iterations: 5
+  min_iterations: 3
+  max_iterations: 10
+  consensus_threshold: 0.85
+  stability_threshold: 0.9
+
+models:
+  # LiteLLM Proxy Settings
+  # All LLM calls go through this OpenAI-compatible endpoint
+  proxy:
+    api_base: "http://localhost:4000"  # Your LiteLLM proxy URL or OpenAI-compatible endpoint
+    api_key: ""  # Set via OPENAI_API_KEY env var or enter here (not recommended for shared configs)
+
+  # Default model (used if agent-specific model not specified)
+  default_model: gpt-4o
+
+  # Per-agent model assignment
+  # Each agent can use a different model/temperature
+  # Temperature guide:
+  #   - Lower (0.1-0.3): More focused, deterministic (good for Architect)
+  #   - Medium (0.5-0.7): Balanced (good for Researcher, Orchestrator)
+  #   - Higher (0.8-1.0): More creative (good for Critic)
+  agents:
+    orchestrator:
+      model: gpt-4o
+      temperature: 0.7
+    researcher:
+      model: gpt-4o
+      temperature: 0.5
+    critic:
+      model: gpt-4o
+      temperature: 0.9  # Higher for creative critique
+    architect:
+      model: gpt-4o
+      temperature: 0.3  # Lower for precise synthesis
+    estimator:
+      model: gpt-4o
+      temperature: 0.5
+
+output:
+  format: markdown
+  directory: reports
+  include_raw_transcripts: false  # Set to true to include full agent outputs in report
+
+human_in_the_loop:
+  enabled: true
+  checkpoint_frequency: every_cycle  # Options: every_cycle, end_only, manual
+  pause_on_conflicts: true  # Pause when agents disagree significantly
+
+# CLI Display settings
+ui:
+  show_spinner: true
+  color_enabled: true
+  verbose: false  # Set to true for detailed API call logging
+
+# ============================================================================
+# Example: Using different providers per agent
+# ============================================================================
+# models:
+#   proxy:
+#     api_base: "https://api.openai.com/v1"
+#     api_key: ""  # Set via OPENAI_API_KEY env var
+#   
+#   agents:
+#     orchestrator:
+#       model: gpt-4o
+#       temperature: 0.7
+#     researcher:
+#       model: claude-3-sonnet-20240229  # Via LiteLLM proxy routing
+#       temperature: 0.5
+#     critic:
+#       model: gpt-4-turbo
+#       temperature: 0.9
+#     architect:
+#       model: gpt-4o
+#       temperature: 0.3
+#     estimator:
+#       model: claude-3-haiku-20240307  # Faster, cheaper for estimation
+#       temperature: 0.5
+
+# ============================================================================
+# Example: Local model via Ollama
+# ============================================================================
+# models:
+#   proxy:
+#     api_base: "http://localhost:11434/v1"  # Ollama OpenAI-compatible endpoint
+#     api_key: "ollama"  # Ollama doesn't require a real key
+#   
+#   default_model: llama3
+#   
+#   agents:
+#     orchestrator:
+#       model: llama3
+#       temperature: 0.7
+#     # ... configure other agents similarly
