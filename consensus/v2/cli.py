@@ -21,6 +21,14 @@ app = typer.Typer(
 console = Console()
 
 
+def prompt_user(prompt: str, default: Optional[str] = None) -> str:
+    """Prompt user for input"""
+    if default:
+        result = console.input(f"{prompt} [{default}]: ")
+        return result if result.strip() else default
+    return console.input(f"{prompt}: ")
+
+
 def display_v2_banner():
     """Display V2 banner"""
     banner = """
@@ -64,7 +72,9 @@ def display_config_info(config: dict):
 
 @app.command()
 def start(
-    topic: str = typer.Option(..., "--topic", "-t", help="Research topic or question"),
+    topic: Optional[str] = typer.Option(
+        None, "--topic", "-t", help="Research topic or question (leave empty for interactive mode)"
+    ),
     config: Optional[str] = typer.Option(
         None, "--config", "-c", help="Path to custom config file"
     ),
@@ -98,6 +108,18 @@ def start(
     if not validate_config(cfg):
         console.print("[red]Error: Invalid configuration[/red]")
         raise typer.Exit(1)
+    
+    # Interactive topic input if not provided
+    if not topic:
+        console.print()
+        topic = prompt_user(
+            "[bold cyan]Enter your research topic or question[/bold cyan]\n"
+            "(Press Enter to start with an empty topic)",
+        ).strip()
+        
+        if not topic:
+            console.print("[yellow]No topic provided. Starting with empty context.[/yellow]")
+            topic = ""
     
     display_config_info(cfg)
     
