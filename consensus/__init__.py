@@ -3,15 +3,13 @@ Consensus-CLI Package
 Iterative Multi-Agent Research Engine
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 __author__ = "Consensus-CLI Team"
 
-from consensus.workflow.graph import ResearchGraph
-from consensus.agents.base import BaseAgent
+from consensus.v2.graph import ResearchGraphV2
 from consensus.models.llm_client import LLMClient
 
 __all__ = [
-    "ResearchGraph",
-    "BaseAgent",
+    "ResearchGraphV2",
     "LLMClient",
 ]

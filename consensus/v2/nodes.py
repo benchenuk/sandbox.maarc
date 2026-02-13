@@ -4,8 +4,11 @@ Implementation of Iteration 1: The "Dumb" Loop with domain-specific agents
 """
 
 from typing import Any, Dict, List
+from rich.console import Console
 from consensus.v2.state import ResearchState, AgentConfig
 from consensus.models.llm_client import LLMClient
+
+console = Console()
 
 
 # Iteration 1: Hardcoded agents (commented out for reference)
@@ -51,8 +54,8 @@ class OrchestratorNode:
         Propose a team of agents for the research topic.
         Iteration 2: Uses LLM to dynamically generate domain-specific team.
         """
-        print(f"\n[Orchestrator] Analyzing topic: {state.topic}")
-        print("[Orchestrator] Generating domain-specific team via LLM...")
+        console.print(f"\n\n[[cyan]Orchestrator[/cyan]]: [on bright_black]Analyzing topic: {state.topic}[/]")
+        console.print(f"[[cyan]Orchestrator[/cyan]]: [on bright_black]Generating domain-specific team via LLM...[/]")
         
         # Generate team using LLM
         prompt = TEAM_GENERATION_PROMPT.format(topic=state.topic)
@@ -114,7 +117,7 @@ class OrchestratorNode:
                 temperature=0.6 if "skeptic" not in role.lower() else 0.8
             ))
         
-        print(f"[Orchestrator] Generated team: {', '.join(a.role for a in team)}")
+        console.print(f"[[cyan]Orchestrator[/cyan]]: Generated team: {', '.join(a.role for a in team)}")
         
         return {
             "team_manifest": team,
@@ -149,12 +152,12 @@ Respond as a {role} would, with appropriate depth and perspective."""
         """
         # Increment iteration counter
         new_iteration = state.current_iteration + 1
-        print(f"\n[Orchestrator] Evaluating consensus (iteration {new_iteration})...")
+        console.print(f"\n[[cyan]Orchestrator[/cyan]]: [on bright_black]Evaluating consensus (iteration {new_iteration})...[/]")
         
         # Simple logic: stop after 1 iteration (for testing)
         # In Iteration 4, this will use LLM to analyze conflicts and consensus
         if new_iteration >= 1:
-            print("[Orchestrator] Consensus evaluation: Sufficient iterations completed")
+            console.print("[[cyan]Orchestrator[/cyan]]: Consensus evaluation: Sufficient iterations completed")
             return {
                 "current_iteration": new_iteration,
                 "consensus_status": "REACHED",
@@ -181,7 +184,7 @@ class AgentNode:
         """
         Conduct initial research on the topic.
         """
-        print(f"\n  [{self.config.role}] Researching...")
+        console.print(f"\n  [[cyan]{self.config.role}[/cyan]]: [on bright_black]Researching...[/]")
         
         # Build prompt with context
         prompt = f"""Topic: {state.topic}
@@ -204,7 +207,7 @@ Focus only on aspects within your expertise. Be concise but thorough."""
         
         # Store output in state
         output_key = self.config.role
-        print(f"  [{self.config.role}] Analysis complete ({len(response)} chars)")
+        console.print(f"  [[cyan]{self.config.role}[/cyan]]: Analysis complete ({len(response)} chars)")
         
         return {
             "agent_outputs": {output_key: response}
@@ -218,7 +221,7 @@ Focus only on aspects within your expertise. Be concise but thorough."""
         if not target_output:
             return {"agent_outputs": {}}
         
-        print(f"\n  [{self.config.role}] Critiquing {target_role}...")
+        console.print(f"\n  [[cyan]{self.config.role}[/cyan]]: [on bright_black]Critiquing {target_role}...[/]")
         
         prompt = f"""Topic: {state.topic}
 
@@ -244,7 +247,7 @@ Be specific and constructive."""
         
         # Store critique with key indicating source and target
         output_key = f"{self.config.role}_critique_of_{target_role}"
-        print(f"  [{self.config.role}] Critique complete ({len(response)} chars)")
+        console.print(f"  [[cyan]{self.config.role}[/cyan]]: Critique complete ({len(response)} chars)")
         
         return {
             "agent_outputs": {output_key: response}
@@ -259,7 +262,7 @@ class SynthesisNode:
     
     async def generate_report(self, state: ResearchState) -> Dict[str, Any]:
         """Generate final markdown report from agent outputs"""
-        print("\n[Synthesizer] Generating final report...")
+        console.print("\n[[cyan]Synthesizer[/cyan]]: [on bright_black]Generating final report...[/]")
         
         # Build report content
         lines = [
@@ -306,7 +309,7 @@ class SynthesisNode:
         
         report_content = "\n".join(lines)
         
-        print(f"[Synthesizer] Report generated ({len(report_content)} chars)")
+        console.print(f"[[cyan]Synthesizer[/cyan]]: Report generated ({len(report_content)} chars)")
         
         return {
             "status": "completed",

@@ -10,15 +10,14 @@ import typer
 from rich.console import Console
 
 # Add the consensus package to path
-from consensus.cli import app as cli_app
-from consensus.ui import display_banner, display_help
+from consensus.v2.cli import app as cli_app, display_v2_banner
 
 app = cli_app
 
 # Main typer application
 def main():
     """Main entry point for Consensus-CLI"""
-    display_banner()
+    display_v2_banner()
     app()
 
 if __name__ == "__main__":

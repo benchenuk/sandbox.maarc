@@ -149,8 +149,8 @@ def start(
         console.print("\n[bold]Agent Outputs:[/bold]")
         for role, output in result.get("agent_outputs", {}).items():
             preview = output[:100].replace('\n', ' ') + "..." if len(output) > 100 else output
-            console.print(f"\n[cyan]{role}:[/cyan]")
-            console.print(f"  {preview}")
+            console.print(f"\n[[cyan]{role}[/cyan]]:")
+            console.print(f"  [on bright_black]{preview}[/]")
         
         console.print(f"\n[dim]Consensus Status: {result.get('consensus_status')}[/dim]")
         

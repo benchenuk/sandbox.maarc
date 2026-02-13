@@ -8,7 +8,9 @@ from pathlib import Path
 from typing import Any, Dict
 import yaml
 
-from consensus.ui import display_error, display_warning
+from rich.console import Console
+
+console = Console()
 
 
 DEFAULT_CONFIG = {
@@ -85,8 +87,8 @@ def load_config(config_path: str = "config.yaml") -> Dict[str, Any]:
     # Check if config file exists
     path = Path(config_path)
     if not path.exists():
-        display_warning(f"Config file not found: {config_path}")
-        display_warning("Using default configuration")
+        console.print(f"[yellow]Warning: Config file not found: {config_path}[/]")
+        console.print("[yellow]Using default configuration[/]")
         return config
 
     try:
@@ -98,8 +100,8 @@ def load_config(config_path: str = "config.yaml") -> Dict[str, Any]:
             config = _merge_configs(config, user_config)
 
     except Exception as e:
-        display_error(f"Error loading config: {str(e)}")
-        display_warning("Using default configuration")
+        console.print(f"[red]Error loading config: {str(e)}[/]")
+        console.print("[yellow]Using default configuration[/]")
         return config
 
     return config
@@ -132,21 +134,21 @@ def validate_config(config: Dict[str, Any]) -> bool:
     required_sections = ["research", "models", "output", "human_in_the_loop"]
     for section in required_sections:
         if section not in config:
-            display_error(f"Missing required config section: {section}")
+            console.print(f"[red]Error: Missing required config section: {section}[/]")
             return False
 
     # Validate research settings
     research = config.get("research", {})
     if research.get("default_iterations", 0) < 1:
-        display_error("default_iterations must be at least 1")
+        console.print("[red]Error: default_iterations must be at least 1[/]")
         return False
 
     if research.get("min_iterations", 0) < 1:
-        display_error("min_iterations must be at least 1")
+        console.print("[red]Error: min_iterations must be at least 1[/]")
         return False
 
     if research.get("max_iterations", 0) < research.get("min_iterations", 0):
-        display_error("max_iterations must be >= min_iterations")
+        console.print("[red]Error: max_iterations must be >= min_iterations[/]")
         return False
 
     return True

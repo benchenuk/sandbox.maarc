@@ -9,7 +9,9 @@ from pathlib import Path
 from typing import Any, Dict, List
 import re
 
-from consensus.ui import console
+from rich.console import Console
+
+console = Console()
 
 
 def generate_report(
