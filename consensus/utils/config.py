@@ -20,7 +20,7 @@ ENV_PLACEHOLDER_PATTERN = re.compile(r'\$\{([^}]+)\}')
 DEFAULT_CONFIG = {
     "app": {
         "name": "Consensus-CLI",
-        "version": "0.2.0",
+        "version": "0.3.0",
     },
     "research": {
         "default_iterations": 5,
