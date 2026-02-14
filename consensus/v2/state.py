@@ -14,6 +14,7 @@ class AgentConfig(BaseModel):
     domain: str
     goal: str
     system_prompt: str = ""
+    provider: str = ""
     model: str = "gpt-4o"
     temperature: float = 0.7
 

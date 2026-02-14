@@ -35,29 +35,49 @@ class LLMClient:
 
     def __init__(self, config: Dict[str, Any]):
         self.config = config
-        proxy_config = config.get("models", {}).get("proxy", {})
-        default_model = config.get("models", {}).get("default_model", "gpt-4o")
+        self._llm_cache: Dict[str, ChatOpenAI] = {}
 
-        self.base_url = proxy_config.get("api_base", os.getenv("OPENAI_BASE_URL", "http://localhost:4000"))
-        self.api_key = os.getenv("OPENAI_API_KEY", proxy_config.get("api_key", "EMPTY"))
-        self.default_model = default_model
+    def _get_provider_config(self, provider_name: str) -> Dict[str, Any]:
+        """Get provider config by name."""
+        from consensus.utils.config import get_provider_config
+        return get_provider_config(self.config, provider_name)
 
-        self._llm = None
+    def _get_connection_params(self, provider_name: str) -> tuple[str, str, str]:
+        """
+        Get connection parameters for a provider.
+        
+        Returns:
+            Tuple of (base_url, api_key, default_model)
+        """
+        provider_cfg = self._get_provider_config(provider_name)
+        
+        base_url = provider_cfg.get("api_base", os.getenv("OPENAI_BASE_URL", "http://localhost:4000"))
+        api_key = provider_cfg.get("api_key", os.getenv("OPENAI_API_KEY", "EMPTY"))
+        default_model = provider_cfg.get("default_model", "gpt-4o")
+        
+        return base_url, api_key, default_model
 
-    def _get_llm(self, model: str, temperature: float, max_tokens: int) -> ChatOpenAI:
-        """Get or create ChatOpenAI instance"""
-        return ChatOpenAI(
-            model=model,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            base_url=self.base_url,
-            api_key=self.api_key,
-        )
+    def _get_llm(self, provider_name: str, model: str, temperature: float, max_tokens: int) -> ChatOpenAI:
+        """Get or create ChatOpenAI instance for a specific provider."""
+        cache_key = f"{provider_name}:{model}:{temperature}"
+        
+        if cache_key not in self._llm_cache:
+            base_url, api_key, _ = self._get_connection_params(provider_name)
+            self._llm_cache[cache_key] = ChatOpenAI(
+                model=model,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                base_url=base_url,
+                api_key=api_key,
+            )
+        
+        return self._llm_cache[cache_key]
 
     async def complete(
         self,
         prompt: str,
         system_prompt: Optional[str] = None,
+        provider: str = None,
         model: str = None,
         temperature: float = 0.7,
         max_tokens: int = 2000,
@@ -68,7 +88,8 @@ class LLMClient:
         Args:
             prompt: User prompt
             system_prompt: System prompt (optional)
-            model: Model to use (e.g., "gpt-4o", "claude-3-sonnet")
+            provider: Provider name (e.g., 'qwen3-4b', 'stepfun'). Uses orchestrator provider if None.
+            model: Model to use. Uses provider's default_model if None.
             temperature: Temperature setting
             max_tokens: Max tokens to generate
 
@@ -77,14 +98,21 @@ class LLMClient:
         """
         if not LANGCHAIN_AVAILABLE:
             logger.warning("LangChain not available - using mock response")
-            return self._mock_completion(prompt, model)
+            return self._mock_completion(prompt, model or "unknown")
 
-        model = model or self.default_model
+        # Determine provider and model
+        if provider is None:
+            from consensus.utils.config import get_orchestrator_provider
+            provider, _ = get_orchestrator_provider(self.config)
+        
+        _, api_key, default_model = self._get_connection_params(provider)
+        model = model or default_model
+        
         prompt_preview = prompt[:50].replace("\n", " ")
 
         logger.info(f"API call: model={model}, temp={temperature}, prompt='{prompt_preview}...'")
 
-        llm = self._get_llm(model, temperature, max_tokens)
+        llm = self._get_llm(provider, model, temperature, max_tokens)
 
         messages = []
         from langchain_core.messages import HumanMessage, SystemMessage

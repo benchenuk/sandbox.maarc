@@ -60,14 +60,14 @@ class OrchestratorNode:
         # Generate team using LLM
         prompt = TEAM_GENERATION_PROMPT.format(topic=state.topic)
         
-        # Get model from config for team generation
-        model_config = state.config.get("models", {})
-        default_model = model_config.get("default_model", "gpt-4o")
+        # Use orchestrator's provider for team generation
+        from consensus.utils.config import get_orchestrator_provider, get_agent_providers
+        orch_provider, orch_config = get_orchestrator_provider(state.config)
         
         response = await self.llm_client.complete(
             prompt=prompt,
-            model=default_model,  # Use configured model
-            temperature=0.7,
+            provider=orch_provider,
+            temperature=state.config.get("orchestrator", {}).get("temperature", 0.7),
             max_tokens=1500
         )
         
@@ -104,17 +104,23 @@ class OrchestratorNode:
             # Generate system prompt for this role
             system_prompt = self._generate_system_prompt(role, domain, goal)
             
-            # Get model from config (default_model or specific agent config)
-            model_config = state.config.get("models", {})
-            default_model = model_config.get("default_model", "gpt-4o")
+            # Get agent provider config for spawned agents
+            agent_providers = get_agent_providers(state.config)
+            agent_cfg = agent_providers.get("default", {})
+            agent_prov = agent_cfg.get("provider", "litellm_proxy")
+            
+            from consensus.utils.config import get_provider_config
+            prov_cfg = get_provider_config(state.config, agent_prov)
+            agent_model = prov_cfg.get("default_model", "gpt-4o")
             
             team.append(AgentConfig(
                 role=role,
                 domain=domain,
                 goal=goal,
                 system_prompt=system_prompt,
-                model=default_model,
-                temperature=0.6 if "skeptic" not in role.lower() else 0.8
+                provider=agent_prov,
+                model=agent_model,
+                temperature=agent_cfg.get("temperature", 0.7) if "skeptic" not in role.lower() else 0.8
             ))
         
         console.print(f"[[cyan]Orchestrator[/cyan]]: Generated team: {', '.join(a.role for a in team)}")
@@ -196,10 +202,11 @@ Your Goal: {self.config.goal}
 Provide your expert analysis of this topic from your specific domain perspective.
 Focus only on aspects within your expertise. Be concise but thorough."""
         
-        # Call LLM
+        # Call LLM with agent's provider
         response = await self.llm_client.complete(
             prompt=prompt,
             system_prompt=self.config.system_prompt,
+            provider=self.config.provider,
             model=self.config.model,
             temperature=self.config.temperature,
             max_tokens=800
@@ -240,6 +247,7 @@ Be specific and constructive."""
         response = await self.llm_client.complete(
             prompt=prompt,
             system_prompt=self.config.system_prompt,
+            provider=self.config.provider,
             model=self.config.model,
             temperature=self.config.temperature,
             max_tokens=600
