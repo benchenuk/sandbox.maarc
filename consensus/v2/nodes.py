@@ -178,52 +178,85 @@ When analyzing a topic:
 
 Respond as a {role} would, with appropriate depth and perspective."""
     
-    async def summarize(self, state: ResearchState) -> Dict[str, Any]:
+    async def draft_report(self, state: ResearchState) -> Dict[str, Any]:
         """
-        Phase 2: Synthesize all agent research into a summary.
-        This summary becomes the common baseline for critique.
+        Phase 2: Create comprehensive draft report from all research.
+        This is a complete structured document (Option B), not just a summary.
+        It serves as the baseline for agent critique.
         """
-        console.print(f"\n[[cyan]Orchestrator[/cyan]]: [on bright_black]Synthesizing research findings...[/]")
+        console.print(f"\n[[cyan]Orchestrator[/cyan]]: [on bright_black]Drafting comprehensive report...[/]")
         
-        # Build synthesis prompt
+        # Gather all research outputs (not critiques)
         research_outputs = []
         for role, output in state.agent_outputs.items():
-            if "_critique_" not in role:
+            if "_critique_" not in role and "_critique" not in role:
                 research_outputs.append(f"## {role}\n{output}")
         
-        synthesis_prompt = f"""You are the Orchestrator synthesizing multi-perspective research.
+        draft_prompt = f"""You are the Research Director creating a comprehensive DRAFT REPORT.
 
 Topic: {state.topic}
+Iteration: {state.current_iteration}
 
-Research Outputs from Team:
+Research Outputs from Domain Experts:
 {chr(10).join(research_outputs)}
 
-Your task:
-1. Identify KEY AGREEMENTS across all perspectives
-2. Identify CONFLICTS or divergent views
-3. Highlight KNOWLEDGE GAPS that need more research
-4. Summarize the current collective understanding
+Create a comprehensive DRAFT REPORT with the following structure:
 
-Format your response as:
-- **Agreements**: (bullet points)
-- **Conflicts**: (bullet points)  
-- **Gaps**: (bullet points)
-- **Summary**: (2-3 paragraph synthesis)"""
+# Draft Report: {state.topic}
+
+## Executive Summary
+- 2-3 paragraphs synthesizing key findings
+- Bottom-line assessment
+
+## Background & Context
+- Why this topic matters
+- Scope of research conducted
+
+## Key Findings
+Organize by THEME (not by individual agent):
+### Theme 1: [e.g., Economic Impact]
+[Synthesize relevant agent findings]
+
+### Theme 2: [e.g., Technical Feasibility]
+...
+
+## Critical Analysis
+### Points of Agreement
+[What all experts agree on]
+
+### Areas of Debate/Conflict
+[Where experts disagree - acknowledge tensions]
+
+### Risk Assessment
+[Key risks identified]
+
+## Recommendations
+[Actionable next steps synthesized from agents]
+
+## Identified Knowledge Gaps
+[What we don't know yet that affects conclusions]
+
+---
+Guidelines:
+- This is a DRAFT - comprehensive but not polished
+- Synthesize viewpoints (don't list "Agent A said... Agent B said...")
+- Explicitly acknowledge conflicts rather than smoothing over them
+- Flag gaps honestly - these may drive next iteration"""
 
         from consensus.utils.config import get_orchestrator_provider
         orch_provider, _ = get_orchestrator_provider(state.config)
         
-        summary = await self.llm_client.complete(
-            prompt=synthesis_prompt,
+        draft = await self.llm_client.complete(
+            prompt=draft_prompt,
             provider=orch_provider,
-            temperature=state.config.get("orchestrator", {}).get("temperature", 0.7),
-            max_tokens=1500
+            temperature=0.4,  # Lower temp for consistent structure
+            max_tokens=2500
         )
         
-        console.print(f"[[cyan]Orchestrator[/cyan]]: Synthesis complete ({len(summary)} chars)")
+        console.print(f"[[cyan]Orchestrator[/cyan]]: Draft report complete ({len(draft)} chars)")
         
         return {
-            "synthesis": summary,
+            "draft_report": draft,
             "status": "critiquing",
         }
     
@@ -336,34 +369,46 @@ Be specific and constructive."""
             "agent_outputs": {output_key: response}
         }
     
-    async def critique_summary(self, state: ResearchState) -> Dict[str, Any]:
+    async def critique_draft(self, state: ResearchState) -> Dict[str, Any]:
         """
-        Phase 3: Critique the orchestrator's synthesis/summary.
-        All agents critique the same baseline, not each other.
+        Phase 3: Critique the orchestrator's draft report.
+        All agents review the comprehensive draft, not just a summary.
         """
-        synthesis = getattr(state, 'synthesis', '')
-        if not synthesis:
-            return {"agent_outputs": {}}
+        draft = getattr(state, 'draft_report', '')
+        if not draft:
+            return {"draft_critiques": {}}
         
-        console.print(f"\n  [[cyan]{self.config.role}[/cyan]]: [on bright_black]Critiquing synthesis...[/]")
+        console.print(f"\n  [[cyan]{self.config.role}[/cyan]]: [on bright_black]Critiquing draft report...[/]")
         
         prompt = f"""Topic: {state.topic}
 
-You are reviewing the Orchestrator's synthesis of all research:
+You are reviewing the Orchestrator's DRAFT REPORT.
 
----SYNTHESIS---
-{synthesis}
----END SYNTHESIS---
+---DRAFT REPORT---
+{draft}
+---END DRAFT---
 
 Your Role: {self.config.role} ({self.config.domain})
 Your Goal: {self.config.goal}
 
-Critique this synthesis from your domain perspective:
-1. What important aspects from your field are missing or underrepresented?
-2. What conflicts or tensions are glossed over?
-3. What would strengthen this collective understanding?
+Review this draft report and provide specific feedback:
 
-Be constructive and specific."""
+1. ACCURACY: Are your research findings correctly represented?
+   - Quote any misrepresentations
+   - Point out where your key points are missing
+
+2. COMPLETENESS: What's missing from your domain perspective?
+   - Critical insights not reflected
+   - Nuances lost in synthesis
+
+3. CONFLICTS: Are disagreements acknowledged fairly?
+   - Is your side of any debate represented?
+   - Are opposing views stated accurately?
+
+4. RECOMMENDATIONS: Are the action items appropriate?
+   - Do they reflect your analysis?
+
+Be specific, constructive, and reference sections when possible."""
         
         response = await self.llm_client.complete(
             prompt=prompt,
@@ -371,15 +416,14 @@ Be constructive and specific."""
             provider=self.config.provider,
             model=self.config.model,
             temperature=self.config.temperature,
-            max_tokens=600
+            max_tokens=800
         )
         
-        # Store critique keyed by agent role
-        output_key = f"{self.config.role}_critique"
+        # Store critique in draft_critiques (separate from agent_outputs)
         console.print(f"  [[cyan]{self.config.role}[/cyan]]: Critique complete ({len(response)} chars)")
         
         return {
-            "agent_outputs": {output_key: response}
+            "draft_critiques": {self.config.role: response}
         }
 
 
@@ -395,47 +439,54 @@ class SynthesisNode:
         self.llm_client = llm_client
     
     async def generate_report(self, state: ResearchState) -> Dict[str, Any]:
-        """Generate comprehensive final report using LLM synthesis."""
+        """Generate comprehensive final report using all available inputs."""
         console.print("\n[[cyan]Synthesizer[/cyan]]: [on bright_black]Generating comprehensive final report...[/]")
         
-        # Gather all research outputs
+        # Gather all research outputs (not critiques)
         research_outputs = []
         for role, output in state.agent_outputs.items():
-            if "_critique" not in role:
+            if "_critique" not in role and "_critique" not in role:
                 research_outputs.append(f"### {role}\n{output}")
         
-        # Gather all critiques
-        critiques = []
-        for role, output in state.agent_outputs.items():
-            if "_critique" in role:
-                agent_name = role.replace("_critique", "")
-                critiques.append(f"### Critique from {agent_name}\n{output}")
+        # Get draft report and critiques
+        draft_report = getattr(state, 'draft_report', '')
+        draft_critiques = getattr(state, 'draft_critiques', {})
+        
+        # Format critiques
+        critiques_text = []
+        for agent, critique in draft_critiques.items():
+            critiques_text.append(f"### Critique from {agent}\n{critique}")
         
         # Build synthesis prompt
         prompt = f"""You are an expert Technical Writer and Research Synthesizer.
 
-Your task: Write a comprehensive, polished research report based on multi-agent analysis.
+Your task: Write a polished FINAL REPORT based on all research, the draft, and critiques.
 
 TOPIC: {state.topic}
-
 ITERATIONS: {state.current_iteration}
 CONSENSUS STATUS: {state.consensus_status}
 
 ---
 
-RESEARCH FINDINGS FROM DOMAIN EXPERTS:
+ORIGINAL RESEARCH FINDINGS FROM DOMAIN EXPERTS:
 
 {chr(10).join(research_outputs)}
 
 ---
 
-EXPERT CRITIQUES OF THE SYNTHESIS:
+DRAFT REPORT (Orchestrator's comprehensive synthesis):
 
-{chr(10).join(critiques) if critiques else "No critiques recorded."}
+{draft_report if draft_report else "[No draft available]"}
 
 ---
 
-Write a professional research report with the following structure:
+AGENT CRITIQUES OF THE DRAFT:
+
+{chr(10).join(critiques_text) if critiques_text else "No critiques recorded."}
+
+---
+
+Write a professional FINAL REPORT with the following structure:
 
 # Executive Summary
 - Key findings and recommendations (2-3 paragraphs)
@@ -462,8 +513,10 @@ Write a professional research report with the following structure:
 # Conclusion
 
 Guidelines:
+- Start from the draft report as your baseline
+- Incorporate valid critiques (accuracy, completeness, conflicts)
+- Use original research to verify and expand where needed
 - Write in a unified voice (not "Agent A said... Agent B said...")
-- Resolve contradictions where possible, flag where not
 - Be comprehensive but concise
 - Use professional academic/business tone
 """

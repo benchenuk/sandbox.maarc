@@ -170,7 +170,7 @@ def info():
     display_v2_banner()
     
     info_text = """
-[bold]V2 Implementation: Iteration 3 - Parallel Execution[/bold]
+[bold]V2 Implementation: Design B.2 - Draft Report Pattern[/bold]
 
 This version introduces:
 
@@ -179,24 +179,32 @@ This version introduces:
    - Domain-appropriate roles generated (Economist, Technologist, etc.)
    - 3-5 agents with specialized system prompts
 
-2. [cyan]Dynamic State Schema[/cyan]
-   - agent_outputs: dict[str, str] - flexible storage for any agent's output
-   - team_manifest: List[AgentConfig] - LLM-generated team
+2. [cyan]Draft Report Pattern[/cyan]
+   - Phase 1: Research (fan-out) - agents produce detailed findings
+   - Phase 2: Draft Report - Orchestrator creates comprehensive structured draft
+   - Phase 3: Critique (fan-out) - agents review and critique the draft
+   - Phase 4: Decision - Orchestrator evaluates, loops or finalizes
+   - Phase 5: Final Report - Synthesizer polishes to professional deliverable
 
-3. [cyan]HITL Team Approval[/cyan]
-   - User reviews dynamically generated team
-   - Can approve, reject, or add custom agents
-   - Then graph executes with approved team
+3. [cyan]Content Preservation[/cyan]
+   - Original agent research never lost
+   - Draft report serves as common baseline for critique
+   - Critiques target specific sections
+   - Final report synthesizes all inputs
 
-4. [cyan]Parallel Execution[/cyan]
-   - Agents run concurrently using asyncio.gather
-   - Fan-out for research, fan-out for critique phases
+4. [cyan]HITL & Dynamic Teams[/cyan]
+   - User approves initial team
+   - Teams can be reassembled between iterations based on gaps
+   - Max iteration limits with early termination possible
+
+[bold]5-Phase Iteration Loop:[/bold]
+Research → Draft Report → Critique → Decision → (Loop or Finalize)
 
 [bold]Roadmap:[/bold]
 • Iteration 1: ✅ The "Dumb" Loop - hardcoded agents
 • Iteration 2: ✅ Dynamic Strategy - LLM-generated team
-• Iteration 3: ✅ Parallel Execution (fan-out/fan-in with asyncio.gather)
-• Iteration 4: 📝 Full Debate Loop & Consensus Detection
+• Iteration 3: ✅ Parallel Execution + Design B.2 Draft Report Pattern
+• Iteration 4: 🔄 Full Debate Loop & Consensus Detection
 """
     console.print(Panel.fit(info_text, border_style="cyan"))
 
