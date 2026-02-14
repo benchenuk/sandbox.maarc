@@ -8,22 +8,18 @@ import logging
 import os
 from typing import Any, Dict, Optional
 
-from rich.console import Console
+import logging
+import os
+from typing import Any, Dict, Optional
+
+# Remove global console and basicConfig that write to stdout/stderr
+logger = logging.getLogger("consensus.llm")
 
 try:
     from langchain_openai import ChatOpenAI
     LANGCHAIN_AVAILABLE = True
 except ImportError:
     LANGCHAIN_AVAILABLE = False
-
-console = Console()
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s | %(levelname)s | %(message)s",
-    datefmt="%H:%M:%S",
-)
-logger = logging.getLogger("consensus.llm")
 
 
 class LLMClient:

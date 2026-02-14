@@ -1,0 +1,96 @@
+Screen {
+    layout: vertical;
+    background: $surface;
+}
+
+HeaderWidget {
+    dock: top;
+    height: 3;
+    background: $primary;
+    color: $text;
+    content-align: center middle;
+    text-style: bold;
+    border-bottom: double $primary-darken-2;
+}
+
+.main-container {
+    padding: 1;
+}
+
+/* Workflow Row */
+WorkflowWidget {
+    height: 7;
+    border: round $primary;
+    margin: 0 0 1 0;
+    padding: 1 2;
+    background: $surface-lighten-1;
+}
+
+.workflow-row {
+     height: 1;
+     margin-bottom: 1;
+}
+
+Label.label {
+    color: $text-muted;
+}
+
+.phase-bar {
+    width: 100%;
+    margin-top: 1;
+}
+
+.phase-bar > .bar--bar {
+    color: $success;
+}
+
+/* Agent Team Row */
+AgentTeamWidget {
+    height: 8;
+    border: round $secondary;
+    margin: 0 0 1 0;
+    padding: 1;
+    background: $surface-lighten-1;
+}
+
+#agent-list {
+    height: 100%;
+    align: center middle;
+}
+
+AgentCard {
+    width: 24;
+    height: 4;
+    margin: 0 1;
+    padding: 1;
+    background: $panel;
+    border: tall $surface-lighten-2;
+    border-title-align: left;
+    content-align: center middle;
+    text-align: center;
+}
+
+AgentCard.working {
+    border: double $success;
+    background: $success-darken-3;
+}
+
+/* Log Window */
+LogWidget {
+    height: 1fr;
+    border: round $surface-lighten-2;
+    margin: 0 0 1 0;
+    background: $surface;
+    padding: 0 1;
+}
+
+/* Input Bar */
+InputWidget {
+    height: 3;
+    padding: 0 1;
+}
+
+#input-line {
+    border: none;
+    background: $panel;
+}
