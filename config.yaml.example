@@ -48,6 +48,31 @@ orchestrator:
     enabled: false  # Future: enable LLM-based conflict analysis
     sensitivity: "medium"  # low, medium, high
 
+
+# ============================================================================
+# Synthesizer Configuration (Final Report Generation)
+# ============================================================================
+# The Synthesizer is a dedicated agent that produces the final comprehensive
+# report based on all research findings, synthesis, and critiques.
+# Uses lower temperature for consistent, professional output.
+synthesizer:
+  provider: litellm_proxy
+  temperature: 0.3
+
+  
+# ============================================================================
+# Spawned Agents Configuration
+# ============================================================================
+# The Orchestrator generates domain-specific agents for each research topic.
+# This configures which provider spawned agents will use.
+# Future: Multiple agent pools for different types of agents
+agents:
+  # Default provider for all spawned agents
+  default:
+    provider: litellm_proxy
+    temperature: 0.7
+
+
 # ============================================================================
 # Model Provider Configuration
 # ============================================================================
@@ -99,19 +124,6 @@ models:
   #   - "performance": Select fastest/lowest-latency provider
   # --------------------------------------------------------------------------
   routing_strategy: "single"
-  
-  # --------------------------------------------------------------------------
-  # Spawning Agents Configuration
-  # --------------------------------------------------------------------------
-  # The Orchestrator generates domain-specific agents for each research topic.
-  # This configures which provider spawned agents will use.
-  # Future: Multiple agent pools for different types of agents
-  # --------------------------------------------------------------------------
-  agents:
-    # Default provider for all spawned agents
-    default:
-      provider: litellm_proxy
-      temperature: 0.7
 
 # ============================================================================
 # Output Configuration
@@ -152,14 +164,23 @@ ui:
 #       api_base: "http://localhost:11434/v1"
 #       api_key: "ollama"
 #       default_model: "llama3"
-#   agents:
-#     default:
-#       provider: ollama
+# agents:
+#   default:
+#     provider: ollama
+# synthesizer:
+#   provider: ollama
+#   temperature: 0.3
 
 # --- Example 2: Using OpenRouter ---
 # orchestrator:
 #   provider: openrouter
 #   temperature: 0.7
+# agents:
+#   default:
+#     provider: openrouter
+# synthesizer:
+#   provider: openrouter
+#   temperature: 0.3
 # models:
 #   providers:
 #     openrouter:
@@ -167,14 +188,18 @@ ui:
 #       api_base: "https://openrouter.ai/api/v1"
 #       api_key: "${OPENROUTER_API_KEY}"
 #       default_model: "openai/gpt-4o"
-#   agents:
-#     default:
-#       provider: openrouter
 
 # --- Example 3: Multi-Provider Setup (Orchestrator vs Agents use different providers) ---
 # orchestrator:
 #   provider: gpt4o  # Stronger model for orchestration
 #   temperature: 0.7
+# agents:
+#   default:
+#     provider: local  # Cheaper local model for spawned agents
+#     temperature: 0.7
+# synthesizer:
+#   provider: gpt4o  # Use strong model for final report
+#   temperature: 0.3
 # models:
 #   providers:
 #     gpt4o:
@@ -187,7 +212,4 @@ ui:
 #       api_base: "http://localhost:11434/v1"
 #       api_key: "ollama"
 #       default_model: "llama3"
-#   agents:
-#     default:
-#       provider: local  # Cheaper local model for spawned agents
-#       temperature: 0.7
+

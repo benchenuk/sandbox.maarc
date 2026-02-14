@@ -47,12 +47,16 @@ DEFAULT_CONFIG = {
             },
         },
         "routing_strategy": "single",
-        "agents": {
-            "default": {
-                "provider": "litellm_proxy",
-                "temperature": 0.7,
-            },
+    },
+    "agents": {
+        "default": {
+            "provider": "litellm_proxy",
+            "temperature": 0.7,
         },
+    },
+    "synthesizer": {
+        "provider": "litellm_proxy",
+        "temperature": 0.3,
     },
     "output": {
         "format": "markdown",
@@ -229,7 +233,7 @@ def get_orchestrator_provider(config: Dict[str, Any]) -> tuple[str, Dict[str, An
         Tuple of (provider_name, provider_config)
     """
     orch_config = config.get("orchestrator", {})
-    provider_name = orch_config.get("provider", "litellm_proxy")
+    provider_name = orch_config.get("provider")
     provider_config = get_provider_config(config, provider_name)
     return provider_name, provider_config
 
@@ -245,7 +249,7 @@ def get_agent_providers(config: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
         Dict mapping agent type -> config with 'provider', 'temperature', etc.
         Currently only 'default' is supported.
     """
-    return config.get("models", {}).get("agents", {})
+    return config.get("agents", {})
 
 
 def ensure_output_directory(config: Dict[str, Any]) -> Path:

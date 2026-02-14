@@ -170,7 +170,7 @@ def info():
     display_v2_banner()
     
     info_text = """
-[bold]V2 Implementation: Iteration 2 - Dynamic Strategy[/bold]
+[bold]V2 Implementation: Iteration 3 - Parallel Execution[/bold]
 
 This version introduces:
 
@@ -188,13 +188,14 @@ This version introduces:
    - Can approve, reject, or add custom agents
    - Then graph executes with approved team
 
-4. [cyan]Sequential Execution[/cyan]
-   - Agents run one after another (parallel in Iteration 3)
+4. [cyan]Parallel Execution[/cyan]
+   - Agents run concurrently using asyncio.gather
+   - Fan-out for research, fan-out for critique phases
 
 [bold]Roadmap:[/bold]
 • Iteration 1: ✅ The "Dumb" Loop - hardcoded agents
 • Iteration 2: ✅ Dynamic Strategy - LLM-generated team
-• Iteration 3: 🔄 Parallel Execution (fan-out/fan-in with Send)
+• Iteration 3: ✅ Parallel Execution (fan-out/fan-in with asyncio.gather)
 • Iteration 4: 📝 Full Debate Loop & Consensus Detection
 """
     console.print(Panel.fit(info_text, border_style="cyan"))
