@@ -76,36 +76,76 @@ DEFAULT_CONFIG = {
 }
 
 
-def load_config(config_path: str = "config.yaml") -> Dict[str, Any]:
+def _get_config_paths() -> list[Path]:
+    """Get list of config file paths to check, in order of priority."""
+    paths = []
+    
+    # 1. Current directory (project-specific)
+    paths.append(Path("config.yaml"))
+    
+    # 2. User config directory (~/.config/maarc/config.yaml)
+    if xdg_config := os.getenv("XDG_CONFIG_HOME"):
+        paths.append(Path(xdg_config) / "maarc" / "config.yaml")
+    else:
+        paths.append(Path.home() / ".config" / "maarc" / "config.yaml")
+    
+    # 3. Home directory (~/.maarc/config.yaml)
+    paths.append(Path.home() / ".maarc" / "config.yaml")
+    
+    return paths
+
+
+def load_config(config_path: str = None) -> Dict[str, Any]:
     """
     Load configuration from YAML file.
+    
+    Searches multiple locations in order:
+    1. ./config.yaml (current directory)
+    2. ~/.config/maarc/config.yaml (XDG standard)
+    3. ~/.maarc/config.yaml (home directory)
+    4. Uses DEFAULT_CONFIG if no file found
 
     Args:
-        config_path: Path to configuration file
+        config_path: Optional explicit path to configuration file
 
     Returns:
         Configuration dictionary
     """
     # Start with default config
     config = DEFAULT_CONFIG.copy()
-
-    # Check if config file exists
-    path = Path(config_path)
-    if not path.exists():
-        console.print(f"[yellow]Warning: Config file not found: {config_path}[/]")
-        console.print("[yellow]Using default configuration[/]")
+    
+    # Determine which config file to load
+    config_file = None
+    
+    if config_path:
+        # Explicit path provided
+        explicit_path = Path(config_path)
+        if explicit_path.exists():
+            config_file = explicit_path
+        else:
+            console.print(f"[yellow]Config not found: {config_path}[/]")
+    else:
+        # Search standard locations
+        for path in _get_config_paths():
+            if path.exists():
+                config_file = path
+                break
+    
+    # If no config file found, use defaults silently
+    if config_file is None:
         return config
-
+    
+    # Load and merge user config
     try:
-        with open(path, "r") as f:
+        with open(config_file, "r") as f:
             user_config = yaml.safe_load(f)
 
         if user_config:
-            # Merge user config with defaults
             config = _merge_configs(config, user_config)
+            console.print(f"[dim]Config loaded: {config_file}[/dim]")
 
     except Exception as e:
-        console.print(f"[red]Error loading config: {str(e)}[/]")
+        console.print(f"[red]Error loading config {config_file}: {str(e)}[/]")
         console.print("[yellow]Using default configuration[/]")
         return config
 
