@@ -3,94 +3,168 @@ Screen {
     background: $surface;
 }
 
+/* Header - large title */
 HeaderWidget {
-    dock: top;
-    height: 3;
-    background: $primary;
-    color: $text;
+    height: 2;
     content-align: center middle;
+    background: $surface-darken-1;
+}
+
+HeaderWidget .title-main {
     text-style: bold;
-    border-bottom: double $primary-darken-2;
-}
-
-.main-container {
-    padding: 1;
-}
-
-/* Workflow Row */
-WorkflowWidget {
-    height: 7;
-    border: round $primary;
-    margin: 0 0 1 0;
-    padding: 1 2;
-    background: $surface-lighten-1;
-}
-
-.workflow-row {
-     height: 1;
-     margin-bottom: 1;
-}
-
-Label.label {
-    color: $text-muted;
-}
-
-.phase-bar {
-    width: 100%;
-    margin-top: 1;
-}
-
-.phase-bar > .bar--bar {
-    color: $success;
-}
-
-/* Agent Team Row */
-AgentTeamWidget {
-    height: 8;
-    border: round $secondary;
-    margin: 0 0 1 0;
-    padding: 1;
-    background: $surface-lighten-1;
-}
-
-#agent-list {
-    height: 100%;
-    align: center middle;
-}
-
-AgentCard {
-    width: 24;
-    height: 4;
-    margin: 0 1;
-    padding: 1;
-    background: $panel;
-    border: tall $surface-lighten-2;
-    border-title-align: left;
-    content-align: center middle;
+    color: $text;
     text-align: center;
 }
 
-AgentCard.working {
-    border: double $success;
-    background: $success-darken-3;
+HeaderWidget .title-sub {
+    color: $text-muted;
+    text-align: center;
 }
 
-/* Log Window */
+.main-container {
+    padding: 0 1;
+}
+
+/* Workflow - single row with arrows left, status right */
+WorkflowWidget {
+    height: 1;
+    margin: 1 0 1 0;
+}
+
+.workflow-row {
+    height: 1;
+    width: 100%;
+}
+
+.arrows-container {
+    height: 1;
+    width: auto;
+}
+
+.phase-arrow {
+    width: auto;
+    height: 1;
+    padding: 0 1;
+    content-align: center middle;
+    color: $text-muted;
+}
+
+.phase-arrow.active {
+    background: $success;
+    color: $text;
+    text-style: bold;
+}
+
+.phase-arrow.completed {
+    background: $success-darken-2;
+    color: $text;
+}
+
+/* Arrow separator between phases */
+.arrow-separator {
+    color: $text-muted;
+    width: auto;
+    padding: 0;
+}
+
+.status-container {
+    height: 1;
+    width: auto;
+    align: right middle;
+    margin-left: 4;
+}
+
+.label {
+    color: $text-muted;
+}
+
+.separator {
+    color: $text-muted;
+}
+
+#iteration-count {
+    color: $text;
+}
+
+#elapsed-time {
+    color: $text;
+}
+
+/* Agent Team - list view with legend */
+AgentTeamWidget {
+    height: auto;
+    max-height: 10;
+    margin: 0 0 1 0;
+    padding: 0;
+}
+
+.legend-row {
+    height: 1;
+    margin-bottom: 1;
+    align: left middle;
+}
+
+.legend-item {
+    margin-right: 2;
+}
+
+#agent-list {
+    height: auto;
+}
+
+.agent-card {
+    height: 1;
+    margin: 0 0 0 0;
+    content-align: left middle;
+}
+
+/* Log - maximize space */
 LogWidget {
     height: 1fr;
-    border: round $surface-lighten-2;
-    margin: 0 0 1 0;
-    background: $surface;
+    border: none;
     padding: 0 1;
 }
 
-/* Input Bar */
+/* Input - minimal */
 InputWidget {
-    height: 3;
-    padding: 0 1;
+    height: 1;
+    margin: 1 0 0 0;
+}
+
+.input-row {
+    height: 1;
+}
+
+.prompt {
+    color: $text-muted;
+    width: 2;
 }
 
 #input-line {
+    height: 1;
     border: none;
-    background: $panel;
+    background: $surface;
+    padding: 0;
+}
+
+#input-line:focus {
+    border: none;
+}
+
+/* Footer - minimal */
+Footer {
+    height: 1;
+    background: $surface-darken-1;
+}
+
+Footer > .footer--key {
+    color: $text-muted;
+    background: $surface-darken-1;
+    text-style: none;
+}
+
+Footer > .footer--highlight {
+    color: $text;
+    background: $surface-darken-1;
+    text-style: bold;
 }

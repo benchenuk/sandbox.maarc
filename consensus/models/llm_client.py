@@ -104,9 +104,7 @@ class LLMClient:
         _, api_key, default_model = self._get_connection_params(provider)
         model = model or default_model
         
-        prompt_preview = prompt[:50].replace("\n", " ")
-
-        logger.info(f"API call: model={model}, temp={temperature}, prompt='{prompt_preview}...'")
+        logger.info(f"[dim]API call: model={model}, temp={temperature}[/dim]")
 
         llm = self._get_llm(provider, model, temperature, max_tokens)
 
@@ -140,8 +138,7 @@ class LLMClient:
             if not isinstance(result, str):
                 result = str(result)
                 
-            result_preview = result[:50].replace("\n", " ")
-            logger.info(f"API success: model={model}, response='{result_preview}...'")
+            logger.info(f"[dim]API response: model={model}, chars={len(result)}[/dim]")
             return result
         except Exception as e:
             import traceback

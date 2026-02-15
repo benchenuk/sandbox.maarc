@@ -1,0 +1,42 @@
+Screen {
+    background: #1a1b26;
+}
+
+Header {
+    background: #24283b;
+    color: #c0caf5;
+    text-style: bold;
+}
+
+#phase-bar {
+    height: 3;
+    content-align: center middle;
+    background: #1f2335;
+    border-bottom: solid #414868;
+}
+
+#info-row {
+    height: 1;
+    content-align: center middle;
+    background: #24283b;
+    color: #7aa2f7;
+    text-style: italic;
+}
+
+#log-panel {
+    background: #1a1b26;
+    border: none;
+    height: 1fr;
+}
+
+#chat-box {
+    height: 3;
+    background: #24283b;
+    border-top: solid #414868;
+    content-align: center middle;
+    color: #565f89;
+}
+
+Footer {
+    background: #24283b;
+}

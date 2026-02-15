@@ -58,11 +58,11 @@ class ResearchGraphV2:
         else:
             print(message)
 
-    def _update_phase(self, name: str, progress: float):
+    def _update_phase(self, name: str):
         """Signal a phase transition to the UI."""
         if self.hub:
-            self.hub.publish("phase_update", name=name, progress=progress)
-        self._log(f"[bold cyan]Phase:[/bold cyan] {name.upper()}")
+            self.hub.publish("phase_update", name=name)
+        self._log(f"Phase: [b]{name.lower()}[/b]")
 
     def _update_agent_status(self, role: str, status: str):
         """Signal an agent status change."""
@@ -124,18 +124,16 @@ class ResearchGraphV2:
         """Phase entry: Prepare for this iteration."""
         next_iter = state.current_iteration + (1 if state.current_iteration == 0 else 0)
         self._update_iteration(next_iter, state.max_iterations)
-        self._update_phase("Planning", 5)
+        self._update_phase("planning")
         
         if state.current_iteration == 0:
-            self._log(f"[[cyan]Orchestrator[/cyan]]: Starting iteration 1")
             return {"current_iteration": 1, "status": "researching"}
         
-        self._log(f"[[cyan]Orchestrator[/cyan]]: Starting iteration {state.current_iteration}")
         return {"status": "researching"}
     
     async def _research_parallel(self, state: ResearchState) -> Dict[str, Any]:
         """Phase 1: RESEARCH - All agents research in parallel."""
-        self._update_phase("Researching", 20)
+        self._update_phase("researching")
         
         tasks = []
         for agent_config in state.team_manifest:
@@ -147,12 +145,12 @@ class ResearchGraphV2:
         all_outputs = {}
         for agent_config, result in zip(state.team_manifest, results):
             if isinstance(result, Exception):
-                self._log(f"[[cyan]{agent_config.role}[/cyan]]: [red]Error: {result}[/red]")
+                self._log(f"[red]{agent_config.role}: error[/red]")
                 all_outputs[agent_config.role] = f"Error: {result}"
             else:
                 all_outputs.update(result)
         
-        self._log(f"[[cyan]Orchestrator[/cyan]]: Collected {len(all_outputs)} research outputs")
+        self._log(f"Collected {len(all_outputs)} outputs")
         return {"agent_outputs": all_outputs, "status": "synthesizing"}
     
     async def _run_agent_research(self, state: ResearchState, agent_config: AgentConfig) -> Dict[str, str]:
@@ -163,17 +161,16 @@ class ResearchGraphV2:
     
     async def _draft_report_phase(self, state: ResearchState) -> Dict[str, Any]:
         """Phase 2: DRAFT REPORT - Orchestrator creates comprehensive draft."""
-        self._update_phase("Drafting", 50)
-        self._update_agent_status("ORCHESTRATOR", "Working")
+        self._update_phase("drafting")
+        self._update_agent_status("ORCHESTRATOR", "drafting")
         
         result = await self.orchestrator.draft_report(state)
-        self._update_agent_status("ORCHESTRATOR", "Idle")
+        self._update_agent_status("ORCHESTRATOR", "idle")
         return result
     
     async def _critique_parallel(self, state: ResearchState) -> Dict[str, Any]:
         """Phase 3: CRITIQUE - All agents critique the draft report."""
-        self._update_phase("Critiquing", 70)
-        self._log("Phase 3: CRITIQUE (Parallel)")
+        self._update_phase("critiquing")
         
         tasks = []
         for agent_config in state.team_manifest:
@@ -185,13 +182,11 @@ class ResearchGraphV2:
         all_critiques = {}
         for agent_config, result in zip(state.team_manifest, results):
             if isinstance(result, Exception):
-                self._log(f"[[cyan]{agent_config.role}[/cyan]]: [red]Error: {result}[/red]")
+                self._log(f"[red]{agent_config.role}: error[/red]")
             else:
                 all_critiques.update(result)
         
-        self._log(f"[[cyan]Orchestrator[/cyan]]: Collected {len(all_critiques)} critiques of draft")
-        
-        # Store critiques separately (don't pollute agent_outputs)
+        self._log(f"Collected {len(all_critiques)} critiques")
         return {"draft_critiques": all_critiques, "status": "evaluating"}
     
     async def _run_agent_critique(self, state: ResearchState, agent_config: AgentConfig) -> Dict[str, str]:
@@ -202,14 +197,10 @@ class ResearchGraphV2:
     
     async def _evaluate_phase(self, state: ResearchState) -> Dict[str, Any]:
         """Phase 4: DECISION - Orchestrator evaluates and decides."""
-        self._update_phase("Evaluating", 90)
-        self._update_agent_status("ORCHESTRATOR", "Working")
+        self._update_phase("evaluating")
+        self._update_agent_status("ORCHESTRATOR", "evaluating")
         res = await self.orchestrator.evaluate_consensus(state)
-        
-        if self.hub and "consensus_status" in res:
-            self.hub.publish("consensus_update", status=res["consensus_status"])
-            
-        self._update_agent_status("ORCHESTRATOR", "Idle")
+        self._update_agent_status("ORCHESTRATOR", "idle")
         return res
     
     def _decision_router(self, state: ResearchState) -> str:
@@ -222,10 +213,10 @@ class ResearchGraphV2:
     
     async def _synthesize_wrapper(self, state: ResearchState) -> Dict[str, Any]:
         """Final report synthesis."""
-        self._update_phase("Finalizing", 95)
-        self._update_agent_status("SYNTHESIZER", "Working")
+        self._update_phase("finalizing")
+        self._update_agent_status("SYNTHESIZER", "working")
         res = await self.synthesizer.generate_report(state)
-        self._update_agent_status("SYNTHESIZER", "Idle")
+        self._update_agent_status("SYNTHESIZER", "idle")
         return res
     
     async def run(self, topic: str, verbose: bool = False) -> Dict[str, Any]:
@@ -242,12 +233,9 @@ class ResearchGraphV2:
         )
         
         try:
-            self._log("Starting MAARC V2 Research Workflow")
-            self._log(f"Topic: {topic}")
             self._update_iteration(0, initial_state.max_iterations)
-            self._update_phase("Setup", 0)
+            self._update_phase("planning")
             
-            self._log("  [Setup] Dynamic Team Generation")
             team_result = await self.orchestrator.propose_team(initial_state)
             team_manifest = team_result["team_manifest"]
             initial_state.team_manifest = team_manifest
@@ -255,14 +243,8 @@ class ResearchGraphV2:
             if self.hub:
                 self.hub.publish("team_update", agents=[{"role": a.role, "domain": a.domain} for a in team_manifest])
             
-            self._log(f"[[cyan]Orchestrator[/cyan]]: Generated team with {len(team_manifest)} agents:")
-            for i, agent in enumerate(team_manifest, 1):
-                self._log(f"  {i}. {agent.role} ({agent.domain})")
-            
             # HITL: Team approval
-            self._log("HUMAN INTERVENTION REQUIRED")
-            
-            prompt = "\n[bold]Approve this team? (y/n/add <role>):[/bold] "
+            prompt = "Approve team? (y/n/add <role>):"
             if self.hub:
                 response = await self.hub.request_input(prompt)
             else:
@@ -280,9 +262,7 @@ class ResearchGraphV2:
                         new_role, "Custom", f"Provide {new_role} perspective"
                     )
                 ))
-                self._log(f"[[cyan]Orchestrator[/cyan]]: Added {new_role}")
-            elif response not in ("y", "yes"):
-                self._log("[[cyan]Orchestrator[/cyan]]: Using proposed team")
+                self._log(f"[dim]Added {new_role}[/dim]")
             
             initial_state.team_approved = True
             initial_state.team_manifest = team_manifest
@@ -315,8 +295,7 @@ class ResearchGraphV2:
         except Exception as e:
             import traceback
             error_trace = traceback.format_exc()
-            self._log(f"[bold red]GRAPH ERROR:[/bold red] {str(e)}")
-            self._log(f"[dim red]{error_trace}[/dim red]")
+            self._log(f"[red]Error: {str(e)}[/red]")
             return {"status": "failed", "error": str(e)}
     
     async def _run_graph(self, initial_state: ResearchState, run_config: Dict) -> ResearchState:
@@ -419,5 +398,5 @@ class ResearchGraphV2:
         with open(filepath, "w", encoding="utf-8") as f:
             f.write(content)
         
-        self._log(f"\n[[cyan]Synthesizer[/cyan]]: Report saved to: {filepath}")
+        self._log(f"\nSynthesizer: Report saved to: {filepath}")
         return str(filepath)

@@ -66,9 +66,9 @@ class OrchestratorNode:
         Propose a team of agents for the research topic.
         Iteration 2: Uses LLM to dynamically generate domain-specific team.
         """
-        self._update_status("ORCHESTRATOR", "Working")
+        self._update_status("ORCHESTRATOR", "planning")
         try:
-            self._log(f"Analyzing topic: {state.topic}")
+            self._log(f"[magenta]Orchestrator[/magenta]: planning team")
             
             # Generate team using LLM
             prompt = TEAM_GENERATION_PROMPT.format(topic=state.topic)
@@ -100,7 +100,7 @@ class OrchestratorNode:
                     raise ValueError("Expected JSON array of agents")
                 
             except (json.JSONDecodeError, ValueError) as e:
-                self._log(f"Failed to parse LLM response, using fallback. Error: {e}", "warning")
+                self._log(f"[yellow]Orchestrator: fallback team[/yellow]")
                 # Fallback to default team
                 team_data = [
                     {"role": "Domain Expert", "domain": "General Analysis", "goal": "Provide comprehensive analysis"},
@@ -115,13 +115,11 @@ class OrchestratorNode:
             
             # Enforce max_agents limit
             if len(team_data) > max_agents:
-                self._log(f"Truncating team from {len(team_data)} to {max_agents} agents", "warning")
                 team_data = team_data[:max_agents]
             
             # Check for skeptic
             has_skeptic = any("skeptic" in str(a.get("role", "")).lower() for a in team_data)
             if require_skeptic and not has_skeptic:
-                self._log("Adding required Skeptic role")
                 team_data.append({
                     "role": "Skeptic",
                     "domain": "Critical Analysis",
@@ -130,7 +128,6 @@ class OrchestratorNode:
             
             # Enforce min_agents by adding generic experts if needed
             while len(team_data) < min_agents:
-                self._log(f"Adding generic expert to meet minimum ({len(team_data)}/{min_agents})")
                 team_data.append({
                     "role": f"Domain Expert {len(team_data)}",
                     "domain": "General Analysis",
@@ -166,14 +163,14 @@ class OrchestratorNode:
                     temperature=agent_cfg.get("temperature", 0.7) if "skeptic" not in role.lower() else 0.8
                 ))
             
-            self._log(f"Generated team: {', '.join(a.role for a in team)}")
+            self._log(f"Team: {', '.join(a.role for a in team)}")
             
             return {
                 "team_manifest": team,
                 "status": "planning",
             }
         finally:
-            self._update_status("ORCHESTRATOR", "Idle")
+            self._update_status("ORCHESTRATOR", "idle")
     
     def _generate_system_prompt(self, role: str, domain: str, goal: str) -> str:
         """Generate a system prompt for an agent based on its configuration."""
@@ -200,9 +197,9 @@ Respond as a {role} would, with appropriate depth and perspective."""
         """
         Phase 2: Create comprehensive draft report from all research.
         """
-        self._update_status("ORCHESTRATOR", "Working")
+        self._update_status("ORCHESTRATOR", "drafting")
         try:
-            self._log("Drafting comprehensive report...")
+            self._log("[magenta]Orchestrator[/magenta]: drafting report")
             
             # Gather all research outputs (not critiques)
             research_outputs = []
@@ -271,27 +268,26 @@ Guidelines:
                 max_tokens=2500
             )
             
-            self._log(f"Draft report complete ({len(draft)} chars)")
+            self._log(f"[magenta]Orchestrator[/magenta]: draft done ({len(draft)} chars)")
             
             return {
                 "draft_report": draft,
                 "status": "critiquing",
             }
         finally:
-            self._update_status("ORCHESTRATOR", "Idle")
+            self._update_status("ORCHESTRATOR", "idle")
     
     async def evaluate_consensus(self, state: ResearchState) -> Dict[str, Any]:
         """
         Phase 4: Evaluate if consensus has been reached.
         """
-        self._update_status("ORCHESTRATOR", "Working")
+        self._update_status("ORCHESTRATOR", "evaluating")
         try:
             new_iteration = state.current_iteration + 1
-            self._log(f"Evaluating consensus (iteration {new_iteration})...")
             
             # Check if we should stop
             if new_iteration >= state.max_iterations:
-                self._log("Max iterations reached")
+                self._log("[dim]Max iterations reached[/dim]")
                 return {
                     "current_iteration": new_iteration,
                     "consensus_status": "REACHED",
@@ -331,11 +327,10 @@ class AgentNode:
         """
         Conduct initial research on the topic.
         """
-        self._update_status("Working")
+        self._update_status("research")
         try:
-            self._log(f"Researching...")
+            self._log(f"[cyan]{self.config.role}[/cyan]: starting research")
             
-            # Build prompt with context
             prompt = f"""Topic: {state.topic}
 
 Your Role: {self.config.role}
@@ -345,7 +340,6 @@ Your Goal: {self.config.goal}
 Provide your expert analysis of this topic from your specific domain perspective.
 Focus only on aspects within your expertise. Be concise but thorough."""
             
-            # Call LLM with agent's provider
             response = await self.llm_client.complete(
                 prompt=prompt,
                 system_prompt=self.config.system_prompt,
@@ -355,15 +349,14 @@ Focus only on aspects within your expertise. Be concise but thorough."""
                 max_tokens=800
             )
             
-            # Store output in state
             output_key = self.config.role
-            self._log(f"Analysis complete ({len(response)} chars)")
+            self._log(f"[cyan]{self.config.role}[/cyan]: done ({len(response)} chars)")
             
             return {
                 "agent_outputs": {output_key: response}
             }
         finally:
-            self._update_status("Idle")
+            self._update_status("idle")
     
     async def critique(self, state: ResearchState, target_role: str) -> Dict[str, Any]:
         """
@@ -414,13 +407,13 @@ Be specific and constructive."""
         """
         Phase 3: Critique the orchestrator's draft report.
         """
-        self._update_status("Working")
+        self._update_status("critique")
         try:
             draft = getattr(state, 'draft_report', '')
             if not draft:
                 return {"draft_critiques": {}}
             
-            self._log(f"Critiquing draft report...")
+            self._log(f"[yellow]{self.config.role}[/yellow]: starting critique")
             
             prompt = f"""Topic: {state.topic}
 
@@ -436,19 +429,9 @@ Your Goal: {self.config.goal}
 Review this draft report and provide specific feedback:
 
 1. ACCURACY: Are your research findings correctly represented?
-   - Quote any misrepresentations
-   - Point out where your key points are missing
-
 2. COMPLETENESS: What's missing from your domain perspective?
-   - Critical insights not reflected
-   - Nuances lost in synthesis
-
 3. CONFLICTS: Are disagreements acknowledged fairly?
-   - Is your side of any debate represented?
-   - Are opposing views stated accurately?
-
 4. RECOMMENDATIONS: Are the action items appropriate?
-   - Do they reflect your analysis?
 
 Be specific, constructive, and reference sections when possible."""
             
@@ -461,14 +444,13 @@ Be specific, constructive, and reference sections when possible."""
                 max_tokens=800
             )
             
-            # Store critique in draft_critiques
-            self._log(f"Critique complete ({len(response)} chars)")
+            self._log(f"[yellow]{self.config.role}[/yellow]: done ({len(response)} chars)")
             
             return {
                 "draft_critiques": {self.config.role: response}
             }
         finally:
-            self._update_status("Idle")
+            self._update_status("idle")
 
 
 class SynthesisNode:
@@ -489,9 +471,9 @@ class SynthesisNode:
     async def generate_report(self, state: ResearchState) -> Dict[str, Any]:
         """Generate comprehensive final report using all available inputs."""
         if self.hub:
-            self.hub.publish("agent_update", role="SYNTHESIZER", status="Working")
+            self.hub.publish("agent_update", role="SYNTHESIZER", status="working")
         try:
-            self._log("Generating comprehensive final report...")
+            self._log("[magenta]Synthesizer[/magenta]: generating final report")
             
             # Gather all research outputs (not critiques)
             research_outputs = []
@@ -585,7 +567,7 @@ Guidelines:
                 max_tokens=4000
             )
             
-            self._log(f"Report generated ({len(report_content)} chars)")
+            self._log(f"[magenta]Synthesizer[/magenta]: done ({len(report_content)} chars)")
             
             return {
                 "final_report": report_content,
@@ -594,4 +576,4 @@ Guidelines:
             }
         finally:
             if self.hub:
-                self.hub.publish("agent_update", role="SYNTHESIZER", status="Idle")
+                self.hub.publish("agent_update", role="SYNTHESIZER", status="idle")
