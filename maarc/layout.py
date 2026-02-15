@@ -177,7 +177,7 @@ class AgentTeamWidget(Static):
 class LogWidget(RichLog):
     """Main log output."""
     def __init__(self, **kwargs):
-        super().__init__(markup=True, auto_scroll=True, highlight=True, **kwargs)
+        super().__init__(markup=True, auto_scroll=True, highlight=True, wrap=True, **kwargs)
         self.can_focus = True
     
     def on_click(self) -> None:

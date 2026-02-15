@@ -119,10 +119,10 @@ async def test_orchestrator_generates_team_dynamically(mock_config):
     assert len(team) == 4
     
     roles = [a.role for a in team]
-    assert "Macroeconomist" in roles
-    assert "Demographer" in roles
-    assert "Policy Analyst" in roles
-    assert "Skeptic" in roles
+    assert "macroeconomist" in roles
+    assert "demographer" in roles
+    assert "policy-analyst" in roles
+    assert "skeptic" in roles
     
     # Verify LLM was called with team generation prompt
     mock_llm.complete.assert_called_once()
@@ -210,8 +210,8 @@ This team should provide comprehensive analysis."""
     # 2 agents from LLM + possibly Skeptic if required
     assert len(team) >= 2
     roles = [a.role for a in team]
-    assert "Technologist" in roles
-    assert "Ethicist" in roles
+    assert "technologist" in roles
+    assert "ethicist" in roles
     
     print("\n✓ Orchestrator handles JSON in markdown code blocks")
 
@@ -313,7 +313,7 @@ def test_agent_config_model():
         temperature=0.7
     )
     
-    assert config.role == "Test Role"
+    assert config.role == "test-role"
     assert config.domain == "Test Domain"
     assert config.provider == "test_provider"
     assert config.temperature == 0.7
@@ -406,7 +406,7 @@ async def test_agent_node_research(mock_config):
     
     # Verify output is stored with dynamic role name
     assert "agent_outputs" in result
-    assert "Climate Scientist" in result["agent_outputs"]
+    assert "climate-scientist" in result["agent_outputs"]
     
     # Verify LLM was called with correct parameters
     call_args = mock_llm.complete.call_args
@@ -443,7 +443,7 @@ async def test_agent_critique_draft(mock_config):
     
     # Verify critique is stored in draft_critiques
     assert "draft_critiques" in result
-    assert "Economist" in result["draft_critiques"]
+    assert "economist" in result["draft_critiques"]
     
     # Verify LLM was called
     mock_llm.complete.assert_called_once()

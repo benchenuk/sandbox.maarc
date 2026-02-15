@@ -3,9 +3,26 @@ V2 State Definition
 Flexible state schema supporting dynamic agent outputs
 """
 
+import re
 from typing import Any, Dict, List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
+
+
+def sanitize_identifier(name: str) -> str:
+    """
+    Sanitize a name to be a valid identifier.
+    Only allows letters, numbers, underscores, and hyphens.
+    Must not begin with a number.
+    """
+    # Convert to lowercase and replace spaces with hyphens
+    safe = name.lower().replace(' ', '-')
+    # Remove all characters except letters, numbers, underscores, hyphens
+    safe = re.sub(r'[^a-z0-9_-]', '', safe)
+    # Ensure doesn't start with a number
+    if safe and safe[0].isdigit():
+        safe = 'agent-' + safe
+    return safe
 
 
 class AgentConfig(BaseModel):
@@ -17,6 +34,12 @@ class AgentConfig(BaseModel):
     provider: str = ""
     model: str = "gpt-4o"
     temperature: float = 0.7
+    
+    @field_validator('role')
+    @classmethod
+    def sanitize_role(cls, v: str) -> str:
+        """Sanitize role to valid identifier characters only."""
+        return sanitize_identifier(v)
 
 
 class ResearchState(BaseModel):

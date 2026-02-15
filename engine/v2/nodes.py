@@ -101,6 +101,10 @@ class OrchestratorNode:
                 
             except (json.JSONDecodeError, ValueError) as e:
                 self._log(f"[yellow]Orchestrator: fallback team[/yellow]")
+                self._log(f"[dim]Reason: {e}[/dim]")
+                # Log the raw response (truncated if too long)
+                response_preview = response[:500] + "..." if len(response) > 500 else response
+                self._log(f"[dim]LLM response: {response_preview}[/dim]")
                 # Fallback to default team
                 team_data = [
                     {"role": "Domain Expert", "domain": "General Analysis", "goal": "Provide comprehensive analysis"},
@@ -229,10 +233,10 @@ Create a comprehensive DRAFT REPORT with the following structure:
 
 ## Key Findings
 Organize by THEME (not by individual agent):
-### Theme 1: [e.g., Economic Impact]
+### [e.g., Economic Impact]
 [Synthesize relevant agent findings]
 
-### Theme 2: [e.g., Technical Feasibility]
+### [e.g., Technical Feasibility]
 ...
 
 ## Critical Analysis
