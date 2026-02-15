@@ -129,7 +129,7 @@ class AgentCard(Static):
         status_colors = {
             "research": "cyan",
             "critique": "yellow", 
-            "drafting": "bright_blue",
+            "drafting": "blue",
             "evaluating": "magenta",
             "planning": "magenta",
             "working": "green",
@@ -139,7 +139,8 @@ class AgentCard(Static):
         if status_lower == "idle":
             self.update(f"○ {role_escaped}")
         else:
-            self.update(f"[bold]● {role_escaped}[/bold]  [{status_color}]{status_lower}[/{status_color}]")
+            # Dot is always green for working (per legend), name is white bold, status colored
+            self.update(f"[green]●[/green] [bold]{role_escaped}[/bold]  [{status_color}]{status_lower}[/{status_color}]")
     
     def update_status(self, status: str):
         self.status = status

@@ -118,11 +118,18 @@ AgentTeamWidget {
     content-align: left middle;
 }
 
-/* Log - maximize space */
+/* Log - maximize space, minimal scrollbars */
 LogWidget {
     height: 1fr;
     border: none;
     padding: 0 1;
+    scrollbar-size: 1 1;
+    scrollbar-background: $surface;
+    scrollbar-color: $surface $surface;
+}
+
+LogWidget:hover {
+    scrollbar-color: $surface-lighten-2 $surface-lighten-2;
 }
 
 /* Input - minimal */

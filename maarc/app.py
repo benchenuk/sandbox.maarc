@@ -42,6 +42,14 @@ class MaarcApp(App):
         ("q", "quit", "Quit"),
         ("c", "copy_log", "Copy")
     ]
+    
+    def action_quit(self):
+        """Quit the app, but first stop any running research."""
+        if getattr(self, '_quitting', False):
+            return  # Already quitting
+        self._quitting = True
+        self.bridge.stop()
+        self.exit()
 
     def __init__(self):
         super().__init__()
@@ -193,7 +201,7 @@ class MaarcApp(App):
             self.input_field.value = ""
             self.input_field.placeholder = "..."
             
-            # Start the research
+            # Start the research in a daemon thread
             self.bridge.start_research(topic=topic)
         else:
             # Subsequent inputs go to hub if waiting
