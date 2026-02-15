@@ -10,8 +10,8 @@ from rich.panel import Panel
 from rich.table import Table
 from rich import box
 
-from consensus.v2.graph import ResearchGraphV2
-from consensus.utils.config import load_config, validate_config
+from engine.v2.graph import ResearchGraphV2
+from engine.utils.config import load_config, validate_config
 
 app = typer.Typer(
     name="consensus-v2",

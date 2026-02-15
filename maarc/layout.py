@@ -7,7 +7,7 @@ class HeaderWidget(Static):
     """Large title header."""
     def compose(self) -> ComposeResult:
         yield Label("MAARC", classes="title-main")
-        yield Label("Multi-Agent Research & Consensus", classes="title-sub")
+        yield Label("Multi-Agent AI Research & Consensus", classes="title-sub")
 
 
 class PhaseArrow(Static):

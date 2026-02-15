@@ -8,9 +8,9 @@ import asyncio
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch, Mock
 from datetime import datetime
-from consensus.workflow.state import ResearchState, IterationResult
-from consensus.workflow.nodes import ResearchNodes
-from consensus.workflow.graph import ResearchGraph
+from engine.workflow.state import ResearchState, IterationResult
+from engine.workflow.nodes import ResearchNodes
+from engine.workflow.graph import ResearchGraph
 
 
 @pytest.fixture
@@ -76,9 +76,9 @@ async def test_stop_and_generate_report_sets_consensus_true(mock_config):
     )
     
     # Mock user input to select "2" (Stop and generate report)
-    with patch("consensus.workflow.nodes.prompt_user", return_value="2"):
-        with patch("consensus.workflow.nodes.display_checkpoint"):
-            with patch("consensus.workflow.nodes.display_agent_thinking"):
+    with patch("engine.workflow.nodes.prompt_user", return_value="2"):
+        with patch("engine.workflow.nodes.display_checkpoint"):
+            with patch("engine.workflow.nodes.display_agent_thinking"):
                 result = await nodes.evaluate_node(state)
     
     # KEY ASSERTIONS - These verify the fix:
@@ -128,9 +128,9 @@ async def test_continue_option_keeps_consensus_false(mock_config):
     )
     
     # Mock user pressing Enter (empty input) to continue
-    with patch("consensus.workflow.nodes.prompt_user", return_value=""):
-        with patch("consensus.workflow.nodes.display_checkpoint"):
-            with patch("consensus.workflow.nodes.display_agent_thinking"):
+    with patch("engine.workflow.nodes.prompt_user", return_value=""):
+        with patch("engine.workflow.nodes.display_checkpoint"):
+            with patch("engine.workflow.nodes.display_agent_thinking"):
                 result = await nodes.evaluate_node(state)
     
     # When continuing, consensus_reached should remain False
@@ -171,9 +171,9 @@ async def test_provide_feedback_sets_paused_status(mock_config):
     )
     
     # Mock user selecting "3" (Provide feedback)
-    with patch("consensus.workflow.nodes.prompt_user", return_value="3"):
-        with patch("consensus.workflow.nodes.display_checkpoint"):
-            with patch("consensus.workflow.nodes.display_agent_thinking"):
+    with patch("engine.workflow.nodes.prompt_user", return_value="3"):
+        with patch("engine.workflow.nodes.display_checkpoint"):
+            with patch("engine.workflow.nodes.display_agent_thinking"):
                 result = await nodes.evaluate_node(state)
     
     # When providing feedback, status should be "paused"
@@ -217,7 +217,7 @@ async def test_iteration_counter_increments(mock_config):
         current_estimator_output="Estimate output",
     )
     
-    with patch("consensus.workflow.nodes.display_agent_thinking"):
+    with patch("engine.workflow.nodes.display_agent_thinking"):
         result = await nodes.evaluate_node(state)
     
     assert result["current_iteration"] == 1, \

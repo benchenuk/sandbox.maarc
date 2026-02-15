@@ -2,6 +2,7 @@ import logging
 import pyperclip
 import re
 from datetime import datetime
+from pathlib import Path
 from textual.app import App, ComposeResult
 from textual.containers import Container
 from textual.widgets import Footer, Input
@@ -22,7 +23,7 @@ class TUIHandler(logging.Handler):
         # Dim low-level API logs
         if record.name.startswith("httpx"):
             msg = f"[dim]{msg}[/dim]"
-        elif record.name == "consensus.llm":
+        elif record.name == "engine.llm":
             msg = f"[dim]{msg}[/dim]"
         # Add color based on level
         elif record.levelno >= logging.ERROR:
@@ -35,7 +36,8 @@ class TUIHandler(logging.Handler):
 class MaarcApp(App):
     """MAARC V2 - Multi-Agent Research & Review Consensus"""
     
-    CSS_PATH = "maarc.tcss"
+    # Get CSS path relative to this file
+    CSS_PATH = str(Path(__file__).parent / "maarc.tcss")
     BINDINGS = [
         ("q", "quit", "Quit"),
         ("c", "copy_log", "Copy")
@@ -49,7 +51,7 @@ class MaarcApp(App):
         tui_handler = TUIHandler(self.hub)
         tui_handler.setFormatter(logging.Formatter("%(name)s: %(message)s"))
         
-        for logger_name in ["consensus", "openai", "httpx"]:
+        for logger_name in ["engine", "openai", "httpx"]:
             l = logging.getLogger(logger_name)
             l.setLevel(logging.INFO)
             l.addHandler(tui_handler)

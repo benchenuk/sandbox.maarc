@@ -7,7 +7,7 @@ Iteration 1: The "Dumb" Loop
 - interrupt_before HITL checkpoint
 """
 
-from consensus.v2.state import ResearchState, AgentConfig
-from consensus.v2.graph import ResearchGraphV2
+from engine.v2.state import ResearchState, AgentConfig
+from engine.v2.graph import ResearchGraphV2
 
 __all__ = ["ResearchState", "AgentConfig", "ResearchGraphV2"]

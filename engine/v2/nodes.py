@@ -7,10 +7,10 @@ from typing import Any, Dict, List, Optional
 import logging
 import json
 
-from consensus.v2.state import ResearchState, AgentConfig
-from consensus.models.llm_client import LLMClient
+from engine.v2.state import ResearchState, AgentConfig
+from engine.models.llm_client import LLMClient
 
-logger = logging.getLogger("consensus.nodes")
+logger = logging.getLogger("engine.nodes")
 
 
 # System prompt template for dynamic team generation
@@ -74,7 +74,7 @@ class OrchestratorNode:
             prompt = TEAM_GENERATION_PROMPT.format(topic=state.topic)
             
             # Get model from config for team generation
-            from consensus.utils.config import get_orchestrator_provider
+            from engine.utils.config import get_orchestrator_provider
             orch_provider, _ = get_orchestrator_provider(state.config)
             
             response = await self.llm_client.complete(
@@ -145,7 +145,7 @@ class OrchestratorNode:
                 system_prompt = self._generate_system_prompt(role, domain, goal)
                 
                 # Get agent provider config for spawned agents
-                from consensus.utils.config import get_agent_providers, get_provider_config
+                from engine.utils.config import get_agent_providers, get_provider_config
                 agent_providers = get_agent_providers(state.config)
                 agent_cfg = agent_providers.get("default", {})
                 agent_prov = agent_cfg.get("provider")
@@ -258,7 +258,7 @@ Guidelines:
 - Explicitly acknowledge conflicts rather than smoothing over them
 - Flag gaps honestly - these may drive next iteration"""
 
-            from consensus.utils.config import get_orchestrator_provider
+            from engine.utils.config import get_orchestrator_provider
             orch_provider, _ = get_orchestrator_provider(state.config)
             
             draft = await self.llm_client.complete(

@@ -13,7 +13,7 @@ import os
 from typing import Any, Dict, Optional
 
 # Remove global console and basicConfig that write to stdout/stderr
-logger = logging.getLogger("consensus.llm")
+logger = logging.getLogger("engine.llm")
 
 try:
     from langchain_openai import ChatOpenAI
@@ -35,7 +35,7 @@ class LLMClient:
 
     def _get_provider_config(self, provider_name: str) -> Dict[str, Any]:
         """Get provider config by name."""
-        from consensus.utils.config import get_provider_config
+        from engine.utils.config import get_provider_config
         return get_provider_config(self.config, provider_name)
 
     def _get_connection_params(self, provider_name: str) -> tuple[str, str, str]:
@@ -98,7 +98,7 @@ class LLMClient:
 
         # Determine provider and model
         if provider is None:
-            from consensus.utils.config import get_orchestrator_provider
+            from engine.utils.config import get_orchestrator_provider
             provider, _ = get_orchestrator_provider(self.config)
         
         _, api_key, default_model = self._get_connection_params(provider)

@@ -34,11 +34,11 @@ dependencies = [
 ]
 
 [project.scripts]
-consensus = "main:main"
+maarc = "maarc.__main__:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["consensus*"]
+include = ["engine*", "maarc*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -2,8 +2,8 @@ import asyncio
 import threading
 from typing import Any, Optional
 
-from consensus.v2.graph import ResearchGraphV2
-from consensus.utils.config import load_config
+from engine.v2.graph import ResearchGraphV2
+from engine.utils.config import load_config
 from maarc.hub import EventHub
 
 class ResearchBridge:

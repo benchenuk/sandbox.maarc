@@ -9,8 +9,8 @@ Research → Draft Report → Critique → Decision → Final
 import pytest
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
-from consensus.v2.state import ResearchState, AgentConfig
-from consensus.v2.nodes import OrchestratorNode, AgentNode, SynthesisNode, TEAM_GENERATION_PROMPT
+from engine.v2.state import ResearchState, AgentConfig
+from engine.v2.nodes import OrchestratorNode, AgentNode, SynthesisNode, TEAM_GENERATION_PROMPT
 
 
 @pytest.fixture

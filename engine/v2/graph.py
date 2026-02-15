@@ -12,9 +12,9 @@ from datetime import datetime
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
 
-from consensus.v2.state import ResearchState, AgentConfig
-from consensus.v2.nodes import OrchestratorNode, AgentNode, SynthesisNode
-from consensus.models.llm_client import LLMClient
+from engine.v2.state import ResearchState, AgentConfig
+from engine.v2.nodes import OrchestratorNode, AgentNode, SynthesisNode
+from engine.models.llm_client import LLMClient
 from rich.console import Console
 
 # Import EventHub from the package it belongs to
