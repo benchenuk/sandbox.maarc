@@ -3,13 +3,13 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "consensus-cli"
+name = "maarc"
 version = "0.4.0"
-description = "Iterative Multi-Agent Research Engine with debate-based consensus"
+description = "Multi-Agent Research & Consensus - AI-powered collaborative research"
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [
-    {name = "Consensus-CLI Team"}
+    {name = "MAARC Team"}
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
