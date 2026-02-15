@@ -1,6 +1,7 @@
 from textual.app import ComposeResult
 from textual.containers import Container, Horizontal, Vertical
-from textual.widgets import Static, Label, RichLog, Input
+from textual.widgets import Button
+from textual.widgets import Static, Label, RichLog, TextArea
 
 
 class HeaderWidget(Static):
@@ -184,8 +185,50 @@ class LogWidget(RichLog):
 
 
 class InputWidget(Static):
-    """Input line with prompt."""
+    """Expandable multi-line input with toggle button."""
+    
+    EXPANDED_HEIGHT = 10
+    
     def compose(self) -> ComposeResult:
         with Horizontal(classes="input-row"):
             yield Label("> ", classes="prompt")
-            yield Input(placeholder="", id="input-line")
+            yield TextArea(id="input-area", show_line_numbers=False)
+            yield Button("^", id="expand-btn", variant="default")
+    
+    def on_mount(self):
+        """Set initial state."""
+        self.expanded = False
+        self.textarea = self.query_one("#input-area", TextArea)
+        self.button = self.query_one("#expand-btn", Button)
+        # Set initial height via styles
+        self.textarea.styles.height = 1
+    
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        """Toggle expand/collapse when button is pressed."""
+        if self.expanded:
+            self.collapse()
+        else:
+            self.expand()
+    
+    def expand(self):
+        """Expand to multi-line height."""
+        if not self.expanded:
+            self.textarea.styles.height = self.EXPANDED_HEIGHT
+            self.button.label = "v"
+            self.expanded = True
+    
+    def collapse(self):
+        """Collapse back to single line."""
+        if self.expanded:
+            self.textarea.styles.height = 1
+            self.button.label = "^"
+            self.expanded = False
+    
+    def get_text(self) -> str:
+        """Get current text content."""
+        return self.textarea.text
+    
+    def clear(self):
+        """Clear input and collapse."""
+        self.textarea.text = ""
+        self.collapse()

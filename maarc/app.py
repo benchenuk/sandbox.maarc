@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from textual.app import App, ComposeResult
 from textual.containers import Container
-from textual.widgets import Footer, Input
+from textual.widgets import Footer, TextArea
 
 from maarc.layout import HeaderWidget, WorkflowWidget, AgentTeamWidget, LogWidget, InputWidget
 from maarc.bridge import ResearchBridge
@@ -40,7 +40,7 @@ class MaarcApp(App):
     CSS_PATH = str(Path(__file__).parent / "maarc.tcss")
     BINDINGS = [
         ("q", "quit", "Quit"),
-        ("c", "copy_log", "Copy")
+        ("c", "copy_log", "Copy"),
     ]
     
     def action_quit(self):
@@ -94,7 +94,8 @@ class MaarcApp(App):
         self.workflow_widget = self.query_one(WorkflowWidget)
         self.team_widget = self.query_one(AgentTeamWidget)
         self.log_widget = self.query_one(LogWidget)
-        self.input_field = self.query_one("#input-line", Input)
+        self.input_widget = self.query_one(InputWidget)
+        self.textarea = self.query_one("#input-area", TextArea)
         
         # Initial system message and topic prompt
         self.write_to_log("[dim]System ready[/dim]")
@@ -102,8 +103,8 @@ class MaarcApp(App):
         self.write_to_log("Enter your research topic:")
         
         self._topic_requested = True
-        self.input_field.placeholder = "Type your research question..."
-        self.input_field.focus()
+        self.textarea.placeholder = "Type your research question..."
+        self.textarea.focus()
 
     def update_elapsed(self):
         """Update elapsed time display."""
@@ -157,9 +158,9 @@ class MaarcApp(App):
         def prepare_input():
             self.write_to_log(f"")
             self.write_to_log(f"[bold]{prompt}[/bold]")
-            self.input_field.placeholder = prompt.strip()
-            self.input_field.value = ""
-            self.input_field.focus()
+            self.textarea.placeholder = prompt.strip()
+            self.input_widget.clear()
+            self.textarea.focus()
             
         self.call_from_thread(prepare_input)
 
@@ -175,19 +176,18 @@ class MaarcApp(App):
         except Exception as e:
             self.log_widget.write(f"[red]Copy failed: {str(e)}[/red]")
 
-    def on_input_submitted(self, event: Input.Submitted) -> None:
-        """Handle Enter key in the input field."""
-        value = event.value.strip()
+    def submit_input(self) -> None:
+        """Submit the current input text."""
+        value = self.textarea.text.strip()
         
         if not value:
             # Empty input - show error and re-prompt
             self.write_to_log("[red]Topic cannot be empty[/red]")
-            self.input_field.value = ""
-            self.input_field.focus()
+            self.textarea.focus()
             return
         
         if self._topic_requested:
-            # First input is the topic
+            # First input is the topic - can be multi-line
             self._topic_requested = False
             topic = value
             self._workflow_start = datetime.now()
@@ -196,22 +196,33 @@ class MaarcApp(App):
             self.set_interval(1, self.update_elapsed)
             
             self.write_to_log(f"")
-            self.write_to_log(f"[dim]Topic: {topic}[/dim]")
+            # Display topic with newlines collapsed for log
+            topic_display = topic.replace('\n', ' ')[:100]
+            if len(topic) > 100:
+                topic_display += "..."
+            self.write_to_log(f"[dim]Topic: {topic_display}[/dim]")
             self.write_to_log("")
-            self.input_field.value = ""
-            self.input_field.placeholder = "..."
+            self.input_widget.clear()
+            self.textarea.placeholder = "..."
             
             # Start the research in a daemon thread
             self.bridge.start_research(topic=topic)
         else:
-            # Subsequent inputs go to hub if waiting
+            # Team approval or other inputs
+            # Check for 'y' or 'n' (exact match after trim)
+            first_line = value.split('\n')[0].strip()
+            if first_line == "y" or first_line == "n":
+                value = first_line  # Use just 'y' or 'n'
+            # TODO: For other inputs, treat as team modification request
+            # For now, just pass through as-is
+            
             if self.hub.submit_input(value):
                 self.write_to_log(f"[cyan]> {value}[/cyan]")
-                self.input_field.value = ""
-                self.input_field.placeholder = "..."
+                self.input_widget.clear()
+                self.textarea.placeholder = "..."
             else:
                 self.write_to_log(f"[dim]Not accepted: {value}[/dim]")
-                self.input_field.value = ""
+                self.input_widget.clear()
 
 
 if __name__ == "__main__":
