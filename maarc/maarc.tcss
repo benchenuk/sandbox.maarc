@@ -125,11 +125,11 @@ LogWidget {
     padding: 0 1;
     scrollbar-size: 1 1;
     scrollbar-background: $surface;
-    scrollbar-color: $surface $surface;
+    scrollbar-color: $surface;
 }
 
 LogWidget:hover {
-    scrollbar-color: $surface-lighten-2 $surface-lighten-2;
+    scrollbar-color: $surface-lighten-2;
 }
 
 /* Input - expandable */

@@ -41,6 +41,7 @@ class MaarcApp(App):
     BINDINGS = [
         ("q", "quit", "Quit"),
         ("c", "copy_log", "Copy"),
+        ("ctrl+j", "submit", "Submit"),
     ]
     
     def action_quit(self):
@@ -50,6 +51,11 @@ class MaarcApp(App):
         self._quitting = True
         self.bridge.stop()
         self.exit()
+    
+    def action_submit(self):
+        """Submit current input (Ctrl+J binding)."""
+        if isinstance(self.focused, TextArea):
+            self.submit_input()
 
     def __init__(self):
         super().__init__()
@@ -103,7 +109,7 @@ class MaarcApp(App):
         self.write_to_log("Enter your research topic:")
         
         self._topic_requested = True
-        self.textarea.placeholder = "Type your research question..."
+        self.textarea.placeholder = "Type your research question... (ctrl+J to submit)"
         self.textarea.focus()
 
     def update_elapsed(self):
@@ -196,11 +202,11 @@ class MaarcApp(App):
             self.set_interval(1, self.update_elapsed)
             
             self.write_to_log(f"")
-            # Display topic with newlines collapsed for log
-            topic_display = topic.replace('\n', ' ')[:100]
-            if len(topic) > 100:
-                topic_display += "..."
-            self.write_to_log(f"[dim]Topic: {topic_display}[/dim]")
+            # Display topic - multi-line support
+            self.write_to_log("[dim]Topic:[/dim]")
+            for line in topic.split('\n'):
+                if line.strip():  # Skip empty lines
+                    self.write_to_log(f"[dim]  {line}[/dim]")
             self.write_to_log("")
             self.input_widget.clear()
             self.textarea.placeholder = "..."
