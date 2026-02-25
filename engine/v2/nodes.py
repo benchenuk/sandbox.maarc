@@ -8,38 +8,18 @@ import logging
 import json
 
 from engine.v2.state import ResearchState, AgentConfig
+from engine.v2.prompts import (
+    TEAM_GENERATION_PROMPT,
+    AGENT_SYSTEM_PROMPT,
+    DRAFT_REPORT_PROMPT,
+    AGENT_RESEARCH_PROMPT,
+    AGENT_CRITIQUE_PROMPT,
+    AGENT_DRAFT_CRITIQUE_PROMPT,
+    FINAL_REPORT_PROMPT,
+)
 from engine.models.llm_client import LLMClient
 
 logger = logging.getLogger("engine.nodes")
-
-
-# System prompt template for dynamic team generation
-TEAM_GENERATION_PROMPT = """You are an expert Project Manager and Domain Analyst.
-
-Analyze the following research topic and determine what expert perspectives are needed for a comprehensive analysis:
-
-TOPIC: "{topic}"
-
-Your task:
-1. Identify the primary domain(s) of this topic (e.g., Economics, Technology, Healthcare, Policy, etc.)
-2. Determine 3-5 distinct expert roles needed to fully assess this topic from multiple angles
-3. Include at least one "Skeptic" or "Risk Analyst" role for critical perspective
-4. Ensure roles are domain-specific and complementary
-
-For each role, provide:
-- role: The expert title (e.g., "Labor Economist", "Sustainability Consultant")
-- domain: The field of expertise (e.g., "Economics", "Environmental Science")
-- goal: Specific objective for this research (1 sentence)
-
-Output ONLY a valid JSON array. Example format:
-[
-  {{"role": "Labor Economist", "domain": "Economics", "goal": "Analyze workforce demographics and labor market trends"}},
-  {{"role": "Sociologist", "domain": "Sociology", "goal": "Examine social structures and cultural implications"}},
-  {{"role": "Policy Analyst", "domain": "Public Policy", "goal": "Evaluate regulatory frameworks and implementation challenges"}},
-  {{"role": "Skeptic", "domain": "Risk Analysis", "goal": "Challenge assumptions and identify potential risks"}}
-]
-
-JSON Output:"""
 
 
 class OrchestratorNode:
@@ -169,6 +149,31 @@ class OrchestratorNode:
             
             self._log(f"Team: {', '.join(a.role for a in team)}")
             
+            # Log team details with subtle background shading in a uniform pane
+            # 1. Prepare the lines and find the max length for a uniform pane
+            display_data = []
+            max_line_len = 0
+            for agent_data in team_data:
+                role = agent_data.get("role", "Expert")
+                goal = agent_data.get("goal", "Analyze the topic")
+                content = f"  {role} — {goal}"
+                display_data.append((role, goal, len(content)))
+                max_line_len = max(max_line_len, len(content))
+            
+            pane_width = max_line_len + 4  # Add some side margin
+            bg_style = "on grey15" # Using a slightly darker, more solid background for the pane
+            text_style = "grey82"  # Brighter text for better contrast
+            
+            # 2. Build the pane with a padding line at top and bottom
+            team_lines = [f"[{bg_style}]" + " " * pane_width + f"[/{bg_style}]"]
+            for role, goal, length in display_data:
+                padding = " " * (pane_width - length)
+                line = f"[{text_style} {bg_style}]  [bold]{role}[/bold] — [dim]{goal}[/dim]{padding}[/{text_style} {bg_style}]"
+                team_lines.append(line)
+            team_lines.append(f"[{bg_style}]" + " " * pane_width + f"[/{bg_style}]")
+            
+            self._log("\n".join(team_lines))
+            
             return {
                 "team_manifest": team,
                 "status": "planning",
@@ -178,24 +183,7 @@ class OrchestratorNode:
     
     def _generate_system_prompt(self, role: str, domain: str, goal: str) -> str:
         """Generate a system prompt for an agent based on its configuration."""
-        return f"""You are a {role} specializing in {domain}.
-
-Your Goal: {goal}
-
-Expertise Guidelines:
-1. Focus STRICTLY on aspects within your {domain} expertise
-2. Use domain-specific frameworks, terminology, and analytical approaches
-3. Consider both theoretical and practical implications
-4. Be precise and evidence-based in your reasoning
-5. Acknowledge limitations of your perspective when appropriate
-
-When analyzing a topic:
-- Provide 2-3 concise paragraphs of analysis
-- Stay within your domain expertise
-- Avoid generalizations outside your field
-- Highlight domain-specific implications
-
-Respond as a {role} would, with appropriate depth and perspective."""
+        return AGENT_SYSTEM_PROMPT.format(role=role, domain=domain, goal=goal)
     
     async def draft_report(self, state: ResearchState) -> Dict[str, Any]:
         """
@@ -211,56 +199,11 @@ Respond as a {role} would, with appropriate depth and perspective."""
                 if "_critique_" not in role and "_critique" not in role:
                     research_outputs.append(f"## {role}\n{output}")
             
-            draft_prompt = f"""You are the Research Director creating a comprehensive DRAFT REPORT.
-
-Topic: {state.topic}
-Iteration: {state.current_iteration}
-
-Research Outputs from Domain Experts:
-{chr(10).join(research_outputs)}
-
-Create a comprehensive DRAFT REPORT with the following structure:
-
-# Draft Report: {state.topic}
-
-## Executive Summary
-- 2-3 paragraphs synthesizing key findings
-- Bottom-line assessment
-
-## Background & Context
-- Why this topic matters
-- Scope of research conducted
-
-## Key Findings
-Organize by THEME (not by individual agent):
-### [e.g., Economic Impact]
-[Synthesize relevant agent findings]
-
-### [e.g., Technical Feasibility]
-...
-
-## Critical Analysis
-### Points of Agreement
-[What all experts agree on]
-
-### Areas of Debate/Conflict
-[Where experts disagree - acknowledge tensions]
-
-### Risk Assessment
-[Key risks identified]
-
-## Recommendations
-[Actionable next steps synthesized from agents]
-
-## Identified Knowledge Gaps
-[What we don't know yet that affects conclusions]
-
----
-Guidelines:
-- This is a DRAFT - comprehensive but not polished
-- Synthesize viewpoints (don't list "Agent A said... Agent B said...")
-- Explicitly acknowledge conflicts rather than smoothing over them
-- Flag gaps honestly - these may drive next iteration"""
+            draft_prompt = DRAFT_REPORT_PROMPT.format(
+                topic=state.topic,
+                iteration=state.current_iteration,
+                research_outputs="\n".join(research_outputs),
+            )
 
             from engine.utils.config import get_orchestrator_provider
             orch_provider, _ = get_orchestrator_provider(state.config)
@@ -335,14 +278,12 @@ class AgentNode:
         try:
             self._log(f"[cyan]{self.config.role}[/cyan]: starting research")
             
-            prompt = f"""Topic: {state.topic}
-
-Your Role: {self.config.role}
-Your Domain: {self.config.domain}
-Your Goal: {self.config.goal}
-
-Provide your expert analysis of this topic from your specific domain perspective.
-Focus only on aspects within your expertise. Be concise but thorough."""
+            prompt = AGENT_RESEARCH_PROMPT.format(
+                topic=state.topic,
+                role=self.config.role,
+                domain=self.config.domain,
+                goal=self.config.goal,
+            )
             
             response = await self.llm_client.complete(
                 prompt=prompt,
@@ -374,19 +315,14 @@ Focus only on aspects within your expertise. Be concise but thorough."""
             
             self._log(f"Critiquing {target_role}...")
             
-            prompt = f"""Topic: {state.topic}
-
-You are reviewing the analysis from a {target_role}.
-
-Their Analysis:
-{target_output}
-
-Your Role: {self.config.role} ({self.config.domain})
-Your Goal: {self.config.goal}
-
-Provide your critique of their analysis from your domain perspective.
-Identify gaps, challenge assumptions, or offer complementary insights.
-Be specific and constructive."""
+            prompt = AGENT_CRITIQUE_PROMPT.format(
+                topic=state.topic,
+                target_role=target_role,
+                target_output=target_output,
+                role=self.config.role,
+                domain=self.config.domain,
+                goal=self.config.goal,
+            )
             
             response = await self.llm_client.complete(
                 prompt=prompt,
@@ -419,25 +355,13 @@ Be specific and constructive."""
             
             self._log(f"[yellow]{self.config.role}[/yellow]: starting critique")
             
-            prompt = f"""Topic: {state.topic}
-
-You are reviewing the Orchestrator's DRAFT REPORT.
-
----DRAFT REPORT---
-{draft}
----END DRAFT---
-
-Your Role: {self.config.role} ({self.config.domain})
-Your Goal: {self.config.goal}
-
-Review this draft report and provide specific feedback:
-
-1. ACCURACY: Are your research findings correctly represented?
-2. COMPLETENESS: What's missing from your domain perspective?
-3. CONFLICTS: Are disagreements acknowledged fairly?
-4. RECOMMENDATIONS: Are the action items appropriate?
-
-Be specific, constructive, and reference sections when possible."""
+            prompt = AGENT_DRAFT_CRITIQUE_PROMPT.format(
+                topic=state.topic,
+                draft=draft,
+                role=self.config.role,
+                domain=self.config.domain,
+                goal=self.config.goal,
+            )
             
             response = await self.llm_client.complete(
                 prompt=prompt,
@@ -495,68 +419,15 @@ class SynthesisNode:
                 critiques_text.append(f"### Critique from {agent}\n{critique}")
             
             # Build synthesis prompt
-            prompt = f"""You are an expert Technical Writer and Research Synthesizer.
-
-Your task: Write a polished FINAL REPORT based on all research, the draft, and critiques.
-
-TOPIC: {state.topic}
-ITERATIONS: {state.current_iteration}
-CONSENSUS STATUS: {state.consensus_status}
-
----
-
-ORIGINAL RESEARCH FINDINGS FROM DOMAIN EXPERTS:
-
-{chr(10).join(research_outputs)}
-
----
-
-DRAFT REPORT (Orchestrator's comprehensive synthesis):
-
-{draft_report if draft_report else "[No draft available]"}
-
----
-
-AGENT CRITIQUES OF THE DRAFT:
-
-{chr(10).join(critiques_text) if critiques_text else "No critiques recorded."}
-
----
-
-Write a professional FINAL REPORT with the following structure:
-
-# Executive Summary
-- Key findings and recommendations (2-3 paragraphs)
-- Bottom-line assessment
-
-# Background & Context
-- Why this topic matters
-- Scope of the research
-
-# Key Findings
-- Organized by theme (not by individual agent)
-- Synthesize convergent viewpoints
-- Highlight important divergences
-
-# Critical Analysis
-- Major points of agreement
-- Areas of legitimate debate
-- Risks and uncertainties
-
-# Recommendations
-- Actionable next steps
-- Further research needs
-
-# Conclusion
-
-Guidelines:
-- Start from the draft report as your baseline
-- Incorporate valid critiques (accuracy, completeness, conflicts)
-- Use original research to verify and expand where needed
-- Write in a unified voice (not "Agent A said... Agent B said...")
-- Be comprehensive but concise
-- Use professional academic/business tone
-"""
+            critiques_text_str = "\n".join(critiques_text) if critiques_text else "No critiques recorded."
+            prompt = FINAL_REPORT_PROMPT.format(
+                topic=state.topic,
+                iteration=state.current_iteration,
+                consensus_status=state.consensus_status,
+                research_outputs="\n".join(research_outputs),
+                draft_report=draft_report if draft_report else "[No draft available]",
+                critiques=critiques_text_str,
+            )
 
             # Get synthesizer config
             synth_config = state.config.get("synthesizer", {})
