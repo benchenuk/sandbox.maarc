@@ -393,6 +393,17 @@ class ResearchGraphV2:
                         f"",
                     ])
         
+        # Always append the original question at the end
+        lines.extend([
+            f"",
+            f"---",
+            f"",
+            f"# Original Question",
+            f"",
+            topic,
+            f"",
+        ])
+        
         content = "\n".join(lines)
         
         with open(filepath, "w", encoding="utf-8") as f:
