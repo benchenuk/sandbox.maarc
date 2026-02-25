@@ -6,6 +6,7 @@ Implementation of Iteration 3: Parallel Execution with 4-Phase Loop
 from typing import Any, Dict, List, Optional
 import logging
 import json
+import re
 
 from engine.v2.state import ResearchState, AgentConfig
 from engine.v2.prompts import (
@@ -150,26 +151,36 @@ class OrchestratorNode:
             self._log(f"Team: {', '.join(a.role for a in team)}")
             
             # Log team details with subtle background shading in a uniform pane
-            # 1. Prepare the lines and find the max length for a uniform pane
-            display_data = []
-            max_line_len = 0
+            import textwrap
+            
+            # 1. Calculate ideal pane width based on content, with a min/max bound
+            max_natural = max((len(f"{a.get('role', 'Expert')} — {a.get('goal', 'Analyze the topic')}") for a in team_data), default=0)
+            pane_width = min(max(max_natural + 6, 100), 140)
+            text_width = pane_width - 4
+            
+            bg_style = "on grey23"
+            text_style = "grey82"
+            
+            # 2. Build the pane
+            team_lines = [f"[{bg_style}]" + " " * pane_width + f"[/{bg_style}]"]
             for agent_data in team_data:
                 role = agent_data.get("role", "Expert")
                 goal = agent_data.get("goal", "Analyze the topic")
-                content = f"  {role} — {goal}"
-                display_data.append((role, goal, len(content)))
-                max_line_len = max(max_line_len, len(content))
+                
+                # 1. Role Line (Bold)
+                padding_role = " " * (pane_width - (len(role) + 2))
+                team_lines.append(f"[{text_style} {bg_style}]  [bold]{role}[/bold]{padding_role}[/{text_style} {bg_style}]")
+                
+                # 2. Goal Text (Wrapped)
+                wrapped_goal = textwrap.wrap(goal, width=text_width)
+                for line in wrapped_goal:
+                    content = f"  {line}"
+                    padding = " " * (pane_width - len(content))
+                    team_lines.append(f"[{text_style} {bg_style}]{content}{padding}[/{text_style} {bg_style}]")
+                
+                # 3. Add a small gap between agents (except maybe the last one)
+                team_lines.append(f"[{bg_style}]" + " " * pane_width + f"[/{bg_style}]")
             
-            pane_width = max_line_len + 4  # Add some side margin
-            bg_style = "on grey15" # Using a slightly darker, more solid background for the pane
-            text_style = "grey82"  # Brighter text for better contrast
-            
-            # 2. Build the pane with a padding line at top and bottom
-            team_lines = [f"[{bg_style}]" + " " * pane_width + f"[/{bg_style}]"]
-            for role, goal, length in display_data:
-                padding = " " * (pane_width - length)
-                line = f"[{text_style} {bg_style}]  [bold]{role}[/bold] — [dim]{goal}[/dim]{padding}[/{text_style} {bg_style}]"
-                team_lines.append(line)
             team_lines.append(f"[{bg_style}]" + " " * pane_width + f"[/{bg_style}]")
             
             self._log("\n".join(team_lines))
@@ -215,10 +226,83 @@ class OrchestratorNode:
                 max_tokens=2500
             )
             
+            # Parse JSON takeaways from draft
+            takeaways = []
+            try:
+                # 1. Try to find structured JSON in markdown blocks
+                json_blocks = re.findall(r'```(?:json)?\s*(.*?)\s*```', draft, re.DOTALL)
+                
+                # 2. If no backticks, try a raw search for the pattern
+                if not json_blocks:
+                    # Look for anything that starts with { and has key_takeaways in it
+                    # Greedy match from first { to last } that contains key_takeaways
+                    raw_match = re.search(r'(\{.*"key_takeaways".*\})', draft, re.DOTALL)
+                    if raw_match:
+                        json_blocks = [raw_match.group(1)]
+
+
+                for block in reversed(json_blocks):
+                    try:
+                        data = json.loads(block.strip())
+                        if isinstance(data, dict) and "key_takeaways" in data:
+                            takeaways = data["key_takeaways"]
+                            break
+                    except json.JSONDecodeError:
+                        continue
+                
+                if not takeaways:
+                    # FALLBACK: Try to find a bulleted list under a "Key Takeaways" header
+                    # This handles cases where the LLM ignores the JSON instruction but follows the report structure
+                    takeaways_match = re.search(r'## Key Takeaways\n(.*?)(?:\n##|\Z)', draft, re.DOTALL | re.IGNORECASE)
+                    if takeaways_match:
+                        list_text = takeaways_match.group(1).strip()
+                        # Extract lines starting with - or • or numbering
+                        lines = re.findall(r'(?:^|\n)\s*[•\-\*]\s*(.+)', list_text)
+                        if lines:
+                            takeaways = [l.strip() for l in lines]
+
+                if not takeaways:
+                    self._log("[yellow]Orchestrator: skipped takeaways pane (none parsed from JSON or text)[/yellow]")
+            except Exception as e:
+                self._log(f"[red]Orchestrator: error in takeaway parser: {e}[/red]")
+                # Fallback: if JSON parsing fails, we don't log takeaways block
+                pass
+
             self._log(f"[magenta]Orchestrator[/magenta]: draft done ({len(draft)} chars)")
             
+            if takeaways:
+                self._log(f"[dim]Found {len(takeaways)} key takeaways. Formatting pane...[/dim]")
+                import textwrap
+                
+                # Calculate ideal pane width based on content
+                max_natural = max((len(f"• {t}") for t in takeaways), default=0)
+                pane_width = min(max(max_natural + 8, 100), 140)
+                text_width = pane_width - 8  # Account for margins and bullets
+                
+                bg_style = "on grey23"
+                text_style = "grey82"
+                
+                takeaway_lines = [f"[{bg_style}]" + " " * pane_width + f"[/{bg_style}]"]
+                # Header
+                takeaway_lines.append(f"[{text_style} {bg_style}]  [bold]Key Takeaways:[/bold]{' ' * (pane_width - 17)}[/{text_style} {bg_style}]")
+                takeaway_lines.append(f"[{bg_style}]" + " " * pane_width + f"[/{bg_style}]")
+                
+                for t in takeaways:
+                    # Wrap the takeaway text to fit the pane
+                    wrapped_lines = textwrap.wrap(t, width=text_width)
+                    for i, line in enumerate(wrapped_lines):
+                        prefix = "  • " if i == 0 else "    "
+                        content = f"{prefix}{line}"
+                        padding = " " * (pane_width - len(content))
+                        takeaway_lines.append(f"[{text_style} {bg_style}]{content}{padding}[/{text_style} {bg_style}]")
+                
+                takeaway_lines.append(f"[{bg_style}]" + " " * pane_width + f"[/{bg_style}]")
+                
+                self._log("\n".join(takeaway_lines))
+
             return {
                 "draft_report": draft,
+                "key_takeaways": takeaways,
                 "status": "critiquing",
             }
         finally:

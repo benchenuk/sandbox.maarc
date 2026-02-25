@@ -69,8 +69,14 @@ Create a comprehensive DRAFT REPORT with the following structure:
 # Draft Report: {topic}
 
 ## Executive Summary
-- 2-3 paragraphs synthesizing key findings
+- 1-2 paragraphs synthesizing key findings
 - Bottom-line assessment
+
+## Key Takeaways
+- Up to 3 bullet points of summary, e.g.:
+  - Key findings and opinions
+  - Disagreements, if here is any
+  - Gap, if there is any
 
 ## Background & Context
 - Why this topic matters
@@ -102,10 +108,29 @@ Organize by THEME (not by individual agent):
 
 ---
 Guidelines:
-- This is a DRAFT - comprehensive but not polished
+- Respect what the Domain Experts have reported as the foundation of this draft
+- Your goal is to accomondate their views, not imposing your owns
 - Synthesize viewpoints (don't list "Agent A said... Agent B said...")
 - Explicitly acknowledge conflicts rather than smoothing over them
-- Flag gaps honestly - these may drive next iteration"""
+- Flag gaps honestly - these may drive next iteration
+- This is a DRAFT - comprehensive but not polished, raw debates are valuable
+
+---
+CRITICAL: You MUST end your response with a JSON block containing the Key Takeaways. This is for automated processing.
+
+Your response should end like this:
+(End of report)
+
+```json
+{{
+  "key_takeaways": [
+    "...",
+    "...",
+    "..."
+  ]
+}}
+```
+"""
 
 
 # =============================================================================

@@ -196,12 +196,13 @@ class InputWidget(Static):
             yield Button("^", id="expand-btn", variant="default")
     
     def on_mount(self):
-        """Set initial state."""
-        self.expanded = False
+        """Set initial state - expanded by default for multi-line topics."""
+        self.expanded = True
         self.textarea = self.query_one("#input-area", TextArea)
         self.button = self.query_one("#expand-btn", Button)
         # Set initial height via styles
-        self.textarea.styles.height = 1
+        self.textarea.styles.height = self.EXPANDED_HEIGHT
+        self.button.label = "v"
     
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Toggle expand/collapse when button is pressed."""
