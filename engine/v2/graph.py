@@ -346,26 +346,13 @@ class ResearchGraphV2:
         
         # Add development appendices if enabled
         if self.INCLUDE_DEV_APPENDICES:
-            # Add draft report as appendix
-            if draft:
-                lines.extend([
-                    f"",
-                    f"---",
-                    f"",
-                    f"# APPENDIX A: Draft Report",
-                    f"",
-                    f"The following was the Orchestrator's draft report that was critiqued by agents:",
-                    f"",
-                    draft,
-                ])
-            
             # Add critiques as appendix
             if critiques:
                 lines.extend([
                     f"",
                     f"---",
                     f"",
-                    f"# APPENDIX B: Agent Critiques of Draft",
+                    f"# APPENDIX: Agent Critiques of Draft",
                     f"",
                 ])
                 for agent, critique in critiques.items():
@@ -373,23 +360,6 @@ class ResearchGraphV2:
                         f"## {agent}",
                         f"",
                         critique,
-                        f"",
-                    ])
-            
-            # Add raw agent outputs as final appendix
-            lines.extend([
-                f"",
-                f"---",
-                f"",
-                f"# APPENDIX C: Raw Agent Research Outputs",
-                f"",
-            ])
-            for role, output in state.agent_outputs.items():
-                if "_critique" not in role:
-                    lines.extend([
-                        f"## {role}",
-                        f"",
-                        output,
                         f"",
                     ])
         

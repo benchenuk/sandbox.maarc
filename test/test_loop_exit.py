@@ -17,7 +17,7 @@ from engine.workflow.graph import ResearchGraph
 def mock_config():
     """Test configuration with HITL enabled"""
     return {
-        "app": {"name": "Consensus-CLI", "version": "0.1.0"},
+        "app": {"name": "MAARC", "version": "0.1.0"},
         "research": {
             "default_iterations": 5,
             "min_iterations": 1,

@@ -56,7 +56,7 @@ When analyzing a topic:
 Respond as a {role} would, with appropriate depth and perspective."""
 
 
-DRAFT_REPORT_PROMPT = """You are the Research Director creating a comprehensive DRAFT REPORT.
+DRAFT_REPORT_PROMPT = """You are the Research Director creating a consolidated Research Report.
 
 Topic: {topic}
 Iteration: {iteration}
@@ -64,73 +64,32 @@ Iteration: {iteration}
 Research Outputs from Domain Experts:
 {research_outputs}
 
-Create a comprehensive DRAFT REPORT with the following structure:
+Your task is to synthesize these findings into a single JSON object.
 
-# Draft Report: {topic}
-
-## Executive Summary
-- 1-2 paragraphs synthesizing key findings
-- Bottom-line assessment
-
-## Key Takeaways
-- Up to 3 bullet points of summary, e.g.:
-  - Key findings and opinions
-  - Disagreements, if here is any
-  - Gap, if there is any
-
-## Background & Context
-- Why this topic matters
-- Scope of research conducted
-
-## Key Findings
-Organize by THEME (not by individual agent):
-### [e.g., Economic Impact]
-[Synthesize relevant agent findings]
-
-### [e.g., Technical Feasibility]
-...
-
-## Critical Analysis
-### Points of Agreement
-[What all experts agree on]
-
-### Areas of Debate/Conflict
-[Where experts disagree - acknowledge tensions]
-
-### Risk Assessment
-[Key risks identified]
-
-## Recommendations
-[Actionable next steps synthesized from agents]
-
-## Identified Knowledge Gaps
-[What we don't know yet that affects conclusions]
-
----
-Guidelines:
-- Respect what the Domain Experts have reported as the foundation of this draft
-- Your goal is to accomondate their views, not imposing your owns
-- Synthesize viewpoints (don't list "Agent A said... Agent B said...")
-- Explicitly acknowledge conflicts rather than smoothing over them
-- Flag gaps honestly - these may drive next iteration
-- This is a DRAFT - comprehensive but not polished, raw debates are valuable
-
----
-CRITICAL: You MUST end your response with a JSON block containing the Key Takeaways. This is for automated processing.
-
-Your response should end like this:
-(End of report)
-
-```json
+The JSON MUST follow this structure:
 {{
+  "draft_report": "# Markdown formatted report content here...",
   "key_takeaways": [
-    "...",
-    "...",
+    "takeaway 1",
+    "takeaway 2",
     "..."
   ]
 }}
-```
+
+### Guidelines for 'draft_report':
+1. Use professional Markdown formatting.
+2. Structure: Executive Summary, Background & Context, Key Findings (themed), Critical Analysis (Agreement/Conflict/Risk), Recommendations, and Knowledge Gaps.
+3. Synthesize viewpoints; do not list "Agent A said...".
+4. Explicitly acknowledge conflicts and gaps.
+5. Accommodate experts' views rather than imposing your own.
+
+### Guidelines for 'key_takeaways':
+1. Provide 3-5 high-level, actionable summary points.
+2. Focus on core findings and critical tensions.
+
+CRITICAL: Output ONLY the JSON object. Do not include any text before or after the JSON.
 """
+
 
 
 # =============================================================================

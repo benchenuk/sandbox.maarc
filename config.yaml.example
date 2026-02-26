@@ -1,10 +1,12 @@
-# Consensus-CLI Configuration File
+# MAARC Configuration File
 # Copy this file to config.yaml and customize for your setup
 # DO NOT commit config.yaml if it contains API keys
 
 app:
-  name: Consensus-CLI
+  name: MAARC
   version: 0.3.0
+  debug:
+    save_output: false
 
 research:
   # Iteration settings

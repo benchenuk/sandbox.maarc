@@ -15,7 +15,7 @@ from engine.utils.config import load_config, validate_config
 
 app = typer.Typer(
     name="consensus-v2",
-    help="Consensus-CLI V2: Dynamic Multi-Agent Research Engine",
+    help="MAARC V2: Dynamic Multi-Agent Research Engine",
     add_completion=False,
 )
 console = Console()

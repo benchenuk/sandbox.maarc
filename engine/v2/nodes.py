@@ -22,6 +22,35 @@ from engine.models.llm_client import LLMClient
 
 logger = logging.getLogger("engine.nodes")
 
+def save_debug_output(state: ResearchState, prefix: str, content: str, logger_func=None):
+    # Check app-level 'debug' for save_output flag
+    save_enabled = state.config.get("app", {}).get("debug", {}).get("save_output")
+    
+    if not save_enabled:
+        return
+    
+    import os
+    from pathlib import Path
+    from datetime import datetime
+    
+    debug_dir = Path.home() / ".maarc" / "debug"
+    debug_dir.mkdir(parents=True, exist_ok=True)
+    
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filepath = debug_dir / f"{prefix}_{timestamp}.md"
+    
+    if logger_func:
+        logger_func(f"[dim]Saving debug output to {filepath.name}...[/dim]")
+        
+    try:
+        with open(filepath, "w", encoding="utf-8") as f:
+            f.write(content)
+        if logger_func:
+            logger_func(f"[dim]Debug output saved.[/dim]")
+    except Exception as e:
+        if logger_func:
+            logger_func(f"[red]Failed to save debug output: {e}[/red]")
+
 
 class OrchestratorNode:
     """Orchestrator node - manages the research workflow"""
@@ -154,8 +183,14 @@ class OrchestratorNode:
             import textwrap
             
             # 1. Calculate ideal pane width based on content, with a min/max bound
-            max_natural = max((len(f"{a.get('role', 'Expert')} — {a.get('goal', 'Analyze the topic')}") for a in team_data), default=0)
-            pane_width = min(max(max_natural + 6, 100), 140)
+            # Since roles and goals are on separate lines, we find the longest single line
+            max_natural = 0
+            for a in team_data:
+                role_len = len(a.get("role", "Expert")) + 2
+                goal_len = len(a.get("goal", "Analyze the topic")) + 2
+                max_natural = max(max_natural, role_len, goal_len)
+            
+            pane_width = min(max(max_natural + 4, 80), 100)
             text_width = pane_width - 4
             
             bg_style = "on grey23"
@@ -226,69 +261,49 @@ class OrchestratorNode:
                 max_tokens=2500
             )
             
-            # Parse JSON takeaways from draft
+            # Parse unified JSON response
+            report_content = ""
             takeaways = []
+            
             try:
-                # 1. Try to find structured JSON in markdown blocks
-                json_blocks = re.findall(r'```(?:json)?\s*(.*?)\s*```', draft, re.DOTALL)
+                # Extract JSON from potential code blocks
+                json_match = re.search(r'```(?:json)?\s*(.*?)\s*```', draft, re.DOTALL)
+                json_str = json_match.group(1) if json_match else draft
                 
-                # 2. If no backticks, try a raw search for the pattern
-                if not json_blocks:
-                    # Look for anything that starts with { and has key_takeaways in it
-                    # Greedy match from first { to last } that contains key_takeaways
-                    raw_match = re.search(r'(\{.*"key_takeaways".*\})', draft, re.DOTALL)
-                    if raw_match:
-                        json_blocks = [raw_match.group(1)]
-
-
-                for block in reversed(json_blocks):
-                    try:
-                        data = json.loads(block.strip())
-                        if isinstance(data, dict) and "key_takeaways" in data:
-                            takeaways = data["key_takeaways"]
-                            break
-                    except json.JSONDecodeError:
-                        continue
+                data = json.loads(json_str.strip())
+                report_content = data.get("draft_report", "")
+                takeaways = data.get("key_takeaways", [])
                 
-                if not takeaways:
-                    # FALLBACK: Try to find a bulleted list under a "Key Takeaways" header
-                    # This handles cases where the LLM ignores the JSON instruction but follows the report structure
-                    takeaways_match = re.search(r'## Key Takeaways\n(.*?)(?:\n##|\Z)', draft, re.DOTALL | re.IGNORECASE)
-                    if takeaways_match:
-                        list_text = takeaways_match.group(1).strip()
-                        # Extract lines starting with - or • or numbering
-                        lines = re.findall(r'(?:^|\n)\s*[•\-\*]\s*(.+)', list_text)
-                        if lines:
-                            takeaways = [l.strip() for l in lines]
-
-                if not takeaways:
-                    self._log("[yellow]Orchestrator: skipped takeaways pane (none parsed from JSON or text)[/yellow]")
+                if not report_content:
+                    # Fallback if structure is wrong but text is there
+                    report_content = draft
             except Exception as e:
-                self._log(f"[red]Orchestrator: error in takeaway parser: {e}[/red]")
-                # Fallback: if JSON parsing fails, we don't log takeaways block
-                pass
+                self._log(f"[red]Orchestrator: failed to parse unified JSON: {e}[/red]")
+                # Last resort fallback: treat entire response as report
+                report_content = draft
 
-            self._log(f"[magenta]Orchestrator[/magenta]: draft done ({len(draft)} chars)")
+            save_debug_output(state, "draft_report", report_content, self._log)
+
+            self._log(f"[magenta]Orchestrator[/magenta]: draft done ({len(report_content)} chars)")
             
             if takeaways:
-                self._log(f"[dim]Found {len(takeaways)} key takeaways. Formatting pane...[/dim]")
+                self._log(f"[dim]Summarised in {len(takeaways)} key takeaways ...[/dim]")
                 import textwrap
                 
                 # Calculate ideal pane width based on content
                 max_natural = max((len(f"• {t}") for t in takeaways), default=0)
-                pane_width = min(max(max_natural + 8, 100), 140)
+                # Use a more conservative max width (100 instead of 140) to prevent wrapping jaggedness
+                pane_width = min(max(max_natural + 8, 80), 100)
                 text_width = pane_width - 8  # Account for margins and bullets
                 
                 bg_style = "on grey23"
                 text_style = "grey82"
                 
                 takeaway_lines = [f"[{bg_style}]" + " " * pane_width + f"[/{bg_style}]"]
-                # Header
                 takeaway_lines.append(f"[{text_style} {bg_style}]  [bold]Key Takeaways:[/bold]{' ' * (pane_width - 17)}[/{text_style} {bg_style}]")
                 takeaway_lines.append(f"[{bg_style}]" + " " * pane_width + f"[/{bg_style}]")
                 
                 for t in takeaways:
-                    # Wrap the takeaway text to fit the pane
                     wrapped_lines = textwrap.wrap(t, width=text_width)
                     for i, line in enumerate(wrapped_lines):
                         prefix = "  • " if i == 0 else "    "
@@ -297,11 +312,10 @@ class OrchestratorNode:
                         takeaway_lines.append(f"[{text_style} {bg_style}]{content}{padding}[/{text_style} {bg_style}]")
                 
                 takeaway_lines.append(f"[{bg_style}]" + " " * pane_width + f"[/{bg_style}]")
-                
                 self._log("\n".join(takeaway_lines))
 
             return {
-                "draft_report": draft,
+                "draft_report": report_content,
                 "key_takeaways": takeaways,
                 "status": "critiquing",
             }
@@ -379,6 +393,10 @@ class AgentNode:
             )
             
             output_key = self.config.role
+            
+            # Sanitization of role is already handled by AgentConfig pydantic validation
+            save_debug_output(state, f"agent_research_{self.config.role}", response, self._log)
+            
             self._log(f"[cyan]{self.config.role}[/cyan]: done ({len(response)} chars)")
             
             return {

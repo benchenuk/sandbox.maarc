@@ -19,8 +19,11 @@ ENV_PLACEHOLDER_PATTERN = re.compile(r'\$\{([^}]+)\}')
 
 DEFAULT_CONFIG = {
     "app": {
-        "name": "Consensus-CLI",
+        "name": "MAARC",
         "version": "0.3.0",
+        "debug": {
+            "save_output": False
+        },
     },
     "research": {
         "default_iterations": 5,

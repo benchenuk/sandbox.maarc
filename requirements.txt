@@ -1,4 +1,4 @@
-# Consensus-CLI Dependencies
+# MAARC Dependencies
 # Core dependencies for the multi-agent research engine
 
 # Agent Orchestration

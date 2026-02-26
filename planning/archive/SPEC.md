@@ -1,8 +1,8 @@
-# Consensus-CLI: Iterative Multi-Agent Research Engine
+# MAARC: Iterative Multi-Agent Research Engine
 
 ## Project Overview
 
-**Project Name**: Consensus-CLI
+**Project Name**: MAARC
 **Project Type**: Terminal-based (CLI) Python Application
 **Core Functionality**: An orchestrated multi-agent system that conducts deep research through iterative debate and cross-examination between agents. It features a feedback loop architecture rather than linear execution, Human-in-the-Loop (HITL) checkpoints, and model-agnostic routing.
 **Target Users**: System Architects, Technical Researchers, Project Planners, and Technical Decision Makers
@@ -353,7 +353,7 @@ The orchestrator evaluates consensus using multiple criteria:
 
 ```yaml
 app:
-  name: Consensus-CLI
+  name: MAARC
   version: 0.1.0
 
 research:
@@ -453,7 +453,7 @@ python main.py start --topic "Microservices patterns" --config custom.yaml
 ## File Structure
 
 ```
-consensus-cli/
+MAARC/
 ├── main.py                 # Entry point
 ├── pyproject.toml          # Project configuration
 ├── config.yaml             # Default configuration

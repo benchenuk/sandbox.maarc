@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Consensus-CLI: Iterative Multi-Agent Research Engine
+MAARC: Iterative Multi-Agent Research Engine
 MAARC V2 - Textual UI Entry Point
 """
 

@@ -1,5 +1,5 @@
 """
-Consensus-CLI V2: Dynamic Multi-Agent Research Engine
+MAARC V2: Dynamic Multi-Agent Research Engine
 
 Iteration 1: The "Dumb" Loop
 - Domain-specific hardcoded agents
