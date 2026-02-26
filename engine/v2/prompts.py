@@ -123,9 +123,9 @@ Be specific and constructive."""
 
 
 # Current: Critique of Orchestrator's draft report
-AGENT_DRAFT_CRITIQUE_PROMPT = """Topic: {topic}
+AGENT_CRITIQUE_DRAFT_PROMPT = """Topic: {topic}
 
-You are reviewing the Orchestrator's DRAFT REPORT.
+You are reviewing a draft report on the topic.
 
 ---DRAFT REPORT---
 {draft}
@@ -134,7 +134,7 @@ You are reviewing the Orchestrator's DRAFT REPORT.
 Your Role: {role} ({domain})
 Your Goal: {goal}
 
-Review this draft report and provide specific feedback:
+Review this draft report and provide feedback, for example:
 
 1. ACCURACY: Are your research findings correctly represented?
 2. COMPLETENESS: What's missing from your domain perspective?

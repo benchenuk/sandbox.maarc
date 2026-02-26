@@ -15,7 +15,7 @@ from engine.v2.prompts import (
     DRAFT_REPORT_PROMPT,
     AGENT_RESEARCH_PROMPT,
     AGENT_CRITIQUE_PROMPT,
-    AGENT_DRAFT_CRITIQUE_PROMPT,
+    AGENT_CRITIQUE_DRAFT_PROMPT,
     FINAL_REPORT_PROMPT,
 )
 from engine.models.llm_client import LLMClient
@@ -457,7 +457,7 @@ class AgentNode:
             
             self._log(f"[yellow]{self.config.role}[/yellow]: starting critique")
             
-            prompt = AGENT_DRAFT_CRITIQUE_PROMPT.format(
+            prompt = AGENT_CRITIQUE_DRAFT_PROMPT.format(
                 topic=state.topic,
                 draft=draft,
                 role=self.config.role,
@@ -474,6 +474,7 @@ class AgentNode:
                 max_tokens=800
             )
             
+            save_debug_output(state, f"agent_critique_{self.config.role}", response, self._log)
             self._log(f"[yellow]{self.config.role}[/yellow]: done ({len(response)} chars)")
             
             return {

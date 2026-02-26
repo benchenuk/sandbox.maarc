@@ -344,25 +344,6 @@ class ResearchGraphV2:
             final_report,
         ]
         
-        # Add development appendices if enabled
-        if self.INCLUDE_DEV_APPENDICES:
-            # Add critiques as appendix
-            if critiques:
-                lines.extend([
-                    f"",
-                    f"---",
-                    f"",
-                    f"# APPENDIX: Agent Critiques of Draft",
-                    f"",
-                ])
-                for agent, critique in critiques.items():
-                    lines.extend([
-                        f"## {agent}",
-                        f"",
-                        critique,
-                        f"",
-                    ])
-        
         # Always append the original question at the end
         lines.extend([
             f"",
