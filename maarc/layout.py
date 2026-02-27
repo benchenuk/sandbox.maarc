@@ -110,15 +110,43 @@ class AgentLegend(Static):
 
 
 class AgentCard(Static):
-    """Agent list item with status indicator."""
+    """Agent list item with status indicator with animated blinking."""
+    
+    # Statuses that indicate "working" and should have blinking indicator
+    WORKING_STATUSES = {"research", "critique", "drafting", "evaluating", "planning"}
+    # Blink interval in seconds
+    BLINK_INTERVAL = 0.5
     
     def __init__(self, role: str, status: str = "idle", **kwargs):
         safe_id = f"agent-{role.lower().replace(' ', '-')}"
         super().__init__(id=safe_id, classes="agent-card", **kwargs)
         self.role = role
         self.status = status
+        self._blink_visible = True
+        self._blink_timer = None
     
     def on_mount(self):
+        self.update_content()
+        self._start_blinking()
+    
+    def on_unmount(self):
+        self._stop_blinking()
+    
+    def _start_blinking(self):
+        """Start the blink timer if agent is in a working status."""
+        if self.status.lower() in self.WORKING_STATUSES and self._blink_timer is None:
+            self._blink_timer = self.set_interval(self.BLINK_INTERVAL, self._toggle_blink)
+    
+    def _stop_blinking(self):
+        """Stop the blink timer."""
+        if self._blink_timer is not None:
+            self._blink_timer.stop()
+            self._blink_timer = None
+        self._blink_visible = True
+    
+    def _toggle_blink(self):
+        """Toggle the blink state and refresh the display."""
+        self._blink_visible = not self._blink_visible
         self.update_content()
     
     def update_content(self):
@@ -140,11 +168,30 @@ class AgentCard(Static):
         if status_lower == "idle":
             self.update(f"○ {role_escaped}")
         else:
-            # Dot is always green for working (per legend), name is white bold, status colored
-            self.update(f"[green]●[/green] [bold]{role_escaped}[/bold]  [{status_color}]{status_lower}[/{status_color}]")
+            # Show dot based on blink state
+            if self._blink_visible:
+                dot = f"[green]●[/green]"
+            else:
+                dot = "[dim]○[/dim]"
+            self.update(f"{dot} [bold]{role_escaped}[/bold]  [{status_color}]{status_lower}[/{status_color}]")
     
     def update_status(self, status: str):
+        old_status = self.status.lower()
+        new_status = status.lower()
         self.status = status
+        
+        # Manage blink timer based on status change
+        was_working = old_status in self.WORKING_STATUSES
+        is_working = new_status in self.WORKING_STATUSES
+        
+        if is_working and not was_working:
+            # Started working - start blinking
+            self._blink_visible = True
+            self._start_blinking()
+        elif not is_working and was_working:
+            # Stopped working - stop blinking
+            self._stop_blinking()
+        
         self.update_content()
 
 
@@ -155,14 +202,31 @@ class AgentTeamWidget(Static):
         yield Vertical(id="agent-list")
     
     def update_team(self, agents: list[dict]):
-        """Rebuild agent list."""
+        """Synchronize agent list widgets with new data."""
         container = self.query_one("#agent-list", Vertical)
-        container.query("*").remove()
-        for agent in agents:
-            container.mount(AgentCard(
-                agent["role"],
-                agent.get("status", "idle")
-            ))
+        
+        # 1. Get current children mapped by their role-based ID
+        current_cards = {card.id: card for card in container.query(AgentCard)}
+        new_agent_ids = []
+        
+        # 2. Add or update agents
+        for agent_data in agents:
+            role = agent_data.get("role", "Expert")
+            status = agent_data.get("status", "idle")
+            safe_id = f"agent-{role.lower().replace(' ', '-')}"
+            new_agent_ids.append(safe_id)
+            
+            if safe_id in current_cards:
+                # Update existing card
+                current_cards[safe_id].update_status(status)
+            else:
+                # Mount new card
+                container.mount(AgentCard(role=role, status=status))
+        
+        # 3. Remove agents that are no longer in the team
+        for card_id, card in current_cards.items():
+            if card_id not in new_agent_ids:
+                card.remove()
     
     def update_agent_status(self, role: str, status: str):
         """Update specific agent status."""

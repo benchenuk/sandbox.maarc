@@ -97,7 +97,6 @@ class OrchestratorNode:
             )
             
             # Parse JSON response
-            import json
             try:
                 # Extract JSON from response (handle potential markdown code blocks)
                 json_str = response
@@ -112,11 +111,8 @@ class OrchestratorNode:
                     raise ValueError("Expected JSON array of agents")
                 
             except (json.JSONDecodeError, ValueError) as e:
-                self._log(f"[yellow]Orchestrator: fallback team[/yellow]")
-                self._log(f"[dim]Reason: {e}[/dim]")
-                # Log the raw response (truncated if too long)
-                response_preview = response[:500] + "..." if len(response) > 500 else response
-                self._log(f"[dim]LLM response: {response_preview}[/dim]")
+                self._log(f"[yellow]Orchestrator: failed to parse team JSON: {e}[/yellow]")
+                
                 # Fallback to default team
                 team_data = [
                     {"role": "Domain Expert", "domain": "General Analysis", "goal": "Provide comprehensive analysis"},
@@ -256,7 +252,6 @@ class OrchestratorNode:
             )
             
             # Parse JSON response
-            import json
             try:
                 # Extract JSON from response (handle potential markdown code blocks)
                 json_str = response
@@ -271,8 +266,10 @@ class OrchestratorNode:
                     raise ValueError("Expected JSON array of agents")
                 
             except (json.JSONDecodeError, ValueError) as e:
-                self._log(f"[yellow]Orchestrator: fallback replan team[/yellow]")
-                self._log(f"[dim]Reason: {e}[/dim]")
+                self._log(f"[yellow]Orchestrator: failed to parse replan team JSON: {e}[/yellow]")
+                # Save failed response for debugging
+                save_debug_output(state, f"failed_replan_team_response_iter_{state.current_iteration}", response, self._log)
+                
                 # Fallback to existing team
                 team_data = [{"role": a.role, "domain": a.domain, "goal": a.goal} for a in state.team_manifest]
             
@@ -330,7 +327,7 @@ class OrchestratorNode:
                     temperature=agent_cfg.get("temperature", 0.7) if "skeptic" not in role.lower() else 0.8
                 ))
             
-            self._log(f"New Team: {', '.join(a.role for a in team)}")
+            self._log(f"Team: {', '.join(a.role for a in team)}")
             
             # Paning
             import textwrap
@@ -476,10 +473,10 @@ class OrchestratorNode:
             new_iteration = state.current_iteration + 1
             
             # Check if we should stop
-            if new_iteration >= state.max_iterations:
+            if new_iteration > state.max_iterations:
                 self._log("[dim]Max iterations reached[/dim]")
                 return {
-                    "current_iteration": new_iteration,
+                    "current_iteration": state.current_iteration, # Keep the last valid one if we stop
                     "consensus_status": "REACHED",
                     "status": "completed",
                 }
@@ -531,7 +528,7 @@ class OrchestratorNode:
                     self._log("[yellow]More research needed - updating draft and planning next iteration[/yellow]")
                     
                     # Save the updated draft for debug/record
-                    save_debug_output(state, f"draft_report_updated_iter_{state.current_iteration}", updated_draft, self._log)
+                    save_debug_output(state, f"draft_report_critiqued_iter_{state.current_iteration}", updated_draft, self._log)
                     
                     return {
                         "current_iteration": new_iteration,
@@ -542,6 +539,9 @@ class OrchestratorNode:
                     
             except (json.JSONDecodeError, ValueError) as e:
                 self._log(f"[red]Orchestrator: failed to parse evaluation JSON: {e}[/red]")
+                # Save failed response for debugging
+                save_debug_output(state, f"failed_evaluation_response_iter_{state.current_iteration}", response, self._log)
+                
                 # Fallback to loop if we can't parse, just returning old draft
                 return {
                     "current_iteration": new_iteration,
@@ -550,7 +550,7 @@ class OrchestratorNode:
                 }
 
         finally:
-            self._update_status("ORCHESTRATOR", "Idle")
+            self._update_status("ORCHESTRATOR", "idle")
 
 
 class AgentNode:

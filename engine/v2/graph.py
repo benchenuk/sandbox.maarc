@@ -227,7 +227,7 @@ class ResearchGraphV2:
         """Route to loop or finalize based on consensus status."""
         if state.consensus_status == "REACHED":
             return "finalize"
-        if state.current_iteration >= state.max_iterations:
+        if state.current_iteration > state.max_iterations:
             return "finalize"
         return "loop"
     

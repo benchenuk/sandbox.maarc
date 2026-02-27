@@ -9,7 +9,7 @@ Prompt engineering is key to research quality - edit these to refine agent behav
 # ORCHESTRATOR PROMPTS
 # =============================================================================
 
-TEAM_GENERATION_PROMPT = """You are an expert Project Manager and Domain Analyst.
+TEAM_GENERATION_PROMPT = """You are a Research Director.
 
 Analyze the following research topic and determine what expert perspectives are needed for a comprehensive analysis:
 
@@ -115,9 +115,9 @@ Output ONLY a valid JSON object in this format:
 }}
 """
 
-REPLAN_TEAM_PROMPT = """You are an expert Project Manager and Domain Analyst.
+REPLAN_TEAM_PROMPT = """You are a Research Director.
 
-We are entering a new iteration of research. You must determine the team of experts needed to improve the current draft.
+We are entering a new iteration of research. You need to determine the team of experts needed to improve the current draft.
 
 Topic: {topic}
 
@@ -194,7 +194,12 @@ Review this draft report and provide feedback, for example:
 3. CONFLICTS: Are disagreements acknowledged fairly?
 4. RECOMMENDATIONS: Are the action items appropriate?
 
-Be specific, constructive, and reference sections when possible."""
+Be specific, constructive, and reference sections when possible.
+
+CRITICAL REQUIREMENT: 
+- You MUST include a final section titled "EXECUTIVE ADVICES FOR ACTIONS". 
+  - In this section, provide specific, actionable advice(s) for any updates to the draft report, if applicable. 
+  - For example, what must be added, corrected, what may be sufficient to be mentioned, what gaps must be researched further, etc. """
 
 
 # =============================================================================
