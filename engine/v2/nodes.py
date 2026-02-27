@@ -17,6 +17,8 @@ from engine.v2.prompts import (
     AGENT_CRITIQUE_PROMPT,
     AGENT_CRITIQUE_DRAFT_PROMPT,
     FINAL_REPORT_PROMPT,
+    EVALUATE_CONSENSUS_PROMPT,
+    REPLAN_TEAM_PROMPT,
 )
 from engine.models.llm_client import LLMClient
 
@@ -226,6 +228,149 @@ class OrchestratorNode:
             }
         finally:
             self._update_status("ORCHESTRATOR", "idle")
+            
+    async def replan_team(self, state: ResearchState) -> Dict[str, Any]:
+        """
+        Replan the team for iteration > 1 using the updated draft report.
+        """
+        self._update_status("ORCHESTRATOR", "planning")
+        try:
+            self._log(f"[magenta]Orchestrator[/magenta]: replanning team for iteration {state.current_iteration}")
+            
+            prev_team_text = json.dumps([{"role": a.role, "domain": a.domain, "goal": a.goal} for a in state.team_manifest], indent=2)
+            
+            prompt = REPLAN_TEAM_PROMPT.format(
+                topic=state.topic,
+                draft_report=state.draft_report,
+                previous_team=prev_team_text
+            )
+            
+            from engine.utils.config import get_orchestrator_provider
+            orch_provider, _ = get_orchestrator_provider(state.config)
+            
+            response = await self.llm_client.complete(
+                prompt=prompt,
+                provider=orch_provider,
+                temperature=state.config.get("orchestrator", {}).get("temperature", 0.7),
+                max_tokens=1500
+            )
+            
+            # Parse JSON response
+            import json
+            try:
+                # Extract JSON from response (handle potential markdown code blocks)
+                json_str = response
+                if "```json" in response:
+                    json_str = response.split("```json")[1].split("```")[0].strip()
+                elif "```" in response:
+                    json_str = response.split("```")[1].split("```")[0].strip()
+                
+                team_data = json.loads(json_str)
+                
+                if not isinstance(team_data, list):
+                    raise ValueError("Expected JSON array of agents")
+                
+            except (json.JSONDecodeError, ValueError) as e:
+                self._log(f"[yellow]Orchestrator: fallback replan team[/yellow]")
+                self._log(f"[dim]Reason: {e}[/dim]")
+                # Fallback to existing team
+                team_data = [{"role": a.role, "domain": a.domain, "goal": a.goal} for a in state.team_manifest]
+            
+            # Constraints
+            team_gen = state.config.get("orchestrator", {}).get("team_generation", {})
+            min_agents = team_gen.get("min_agents", 3)
+            max_agents = team_gen.get("max_agents", 5)
+            require_skeptic = team_gen.get("require_skeptic", True)
+            
+            # Enforce max_agents limit
+            if len(team_data) > max_agents:
+                team_data = team_data[:max_agents]
+            
+            # Check for skeptic
+            has_skeptic = any("skeptic" in str(a.get("role", "")).lower() for a in team_data)
+            if require_skeptic and not has_skeptic:
+                team_data.append({
+                    "role": "Skeptic",
+                    "domain": "Critical Analysis",
+                    "goal": "Challenge assumptions and identify risks"
+                })
+            
+            # Enforce min_agents
+            while len(team_data) < min_agents:
+                team_data.append({
+                    "role": f"Domain Expert {len(team_data)}",
+                    "domain": "General Analysis",
+                    "goal": "Provide additional perspective"
+                })
+            
+            # Convert to AgentConfig
+            team = []
+            for agent_data in team_data:
+                role = agent_data.get("role", "Expert")
+                domain = agent_data.get("domain", "General")
+                goal = agent_data.get("goal", "Analyze the topic")
+                
+                system_prompt = self._generate_system_prompt(role, domain, goal)
+                
+                from engine.utils.config import get_agent_providers, get_provider_config
+                agent_providers = get_agent_providers(state.config)
+                agent_cfg = agent_providers.get("default", {})
+                agent_prov = agent_cfg.get("provider")
+                
+                prov_cfg = get_provider_config(state.config, agent_prov)
+                agent_model = prov_cfg.get("default_model", "gpt-4o")
+                
+                team.append(AgentConfig(
+                    role=role,
+                    domain=domain,
+                    goal=goal,
+                    system_prompt=system_prompt,
+                    provider=agent_prov,
+                    model=agent_model,
+                    temperature=agent_cfg.get("temperature", 0.7) if "skeptic" not in role.lower() else 0.8
+                ))
+            
+            self._log(f"New Team: {', '.join(a.role for a in team)}")
+            
+            # Paning
+            import textwrap
+            max_natural = 0
+            for a in team_data:
+                role_len = len(a.get("role", "Expert")) + 2
+                goal_len = len(a.get("goal", "Analyze the topic")) + 2
+                max_natural = max(max_natural, role_len, goal_len)
+            
+            pane_width = min(max(max_natural + 4, 80), 100)
+            text_width = pane_width - 4
+            bg_style = "on grey23"
+            text_style = "grey82"
+            
+            team_lines = [f"[{bg_style}]" + " " * pane_width + f"[/{bg_style}]"]
+            for agent_data in team_data:
+                role = agent_data.get("role", "Expert")
+                goal = agent_data.get("goal", "Analyze the topic")
+                
+                padding_role = " " * (pane_width - (len(role) + 2))
+                team_lines.append(f"[{text_style} {bg_style}]  [bold]{role}[/bold]{padding_role}[/{text_style} {bg_style}]")
+                
+                wrapped_goal = textwrap.wrap(goal, width=text_width)
+                for line in wrapped_goal:
+                    content = f"  {line}"
+                    padding = " " * (pane_width - len(content))
+                    team_lines.append(f"[{text_style} {bg_style}]{content}{padding}[/{text_style} {bg_style}]")
+                
+                team_lines.append(f"[{bg_style}]" + " " * pane_width + f"[/{bg_style}]")
+            
+            team_lines.append(f"[{bg_style}]" + " " * pane_width + f"[/{bg_style}]")
+            self._log("\n".join(team_lines))
+            
+            return {
+                "team_manifest": team,
+                "status": "researching",
+            }
+        finally:
+            self._update_status("ORCHESTRATOR", "idle")
+
     
     def _generate_system_prompt(self, role: str, domain: str, goal: str) -> str:
         """Generate a system prompt for an agent based on its configuration."""
@@ -339,13 +484,71 @@ class OrchestratorNode:
                     "status": "completed",
                 }
             
-            # For now, simple logic: continue looping
-            self._log("More research needed - will assemble team for next iteration")
-            return {
-                "current_iteration": new_iteration,
-                "consensus_status": "IN_PROGRESS",
-                "status": "planning",  # Will trigger new team assembly
-            }
+            self._log(f"[magenta]Orchestrator[/magenta]: evaluating consensus")
+            
+            # Format critiques
+            critiques_text = []
+            for role, critique in getattr(state, 'draft_critiques', {}).items():
+                critiques_text.append(f"## Critique from {role}\n{critique}")
+                
+            prompt = EVALUATE_CONSENSUS_PROMPT.format(
+                topic=state.topic,
+                iteration=state.current_iteration,
+                draft_report=state.draft_report,
+                critiques="\n\n".join(critiques_text) if critiques_text else "No critiques provided."
+            )
+            
+            from engine.utils.config import get_orchestrator_provider
+            orch_provider, _ = get_orchestrator_provider(state.config)
+            
+            response = await self.llm_client.complete(
+                prompt=prompt,
+                provider=orch_provider,
+                temperature=0.3, # Low temp for precise formatting / evaluation
+                max_tokens=2500
+            )
+            
+            try:
+                # Extract JSON
+                json_str = response
+                if "```json" in response:
+                    json_str = response.split("```json")[1].split("```")[0].strip()
+                elif "```" in response:
+                    json_str = response.split("```")[1].split("```")[0].strip()
+                
+                evaluation = json.loads(json_str)
+                decision = evaluation.get("decision", "IN_PROGRESS")
+                updated_draft = evaluation.get("updated_draft", state.draft_report)
+                
+                if decision == "REACHED":
+                    self._log("[green]Consensus REACHED[/green]")
+                    return {
+                        "current_iteration": new_iteration,
+                        "consensus_status": "REACHED",
+                        "status": "completed"
+                    }
+                else:
+                    self._log("[yellow]More research needed - updating draft and planning next iteration[/yellow]")
+                    
+                    # Save the updated draft for debug/record
+                    save_debug_output(state, f"draft_report_updated_iter_{state.current_iteration}", updated_draft, self._log)
+                    
+                    return {
+                        "current_iteration": new_iteration,
+                        "consensus_status": "IN_PROGRESS",
+                        "draft_report": updated_draft, # Replace draft with the newly updated one incorporate critiques
+                        "status": "planning",
+                    }
+                    
+            except (json.JSONDecodeError, ValueError) as e:
+                self._log(f"[red]Orchestrator: failed to parse evaluation JSON: {e}[/red]")
+                # Fallback to loop if we can't parse, just returning old draft
+                return {
+                    "current_iteration": new_iteration,
+                    "consensus_status": "IN_PROGRESS",
+                    "status": "planning"
+                }
+
         finally:
             self._update_status("ORCHESTRATOR", "Idle")
 
@@ -376,11 +579,16 @@ class AgentNode:
         try:
             self._log(f"[cyan]{self.config.role}[/cyan]: starting research")
             
+            draft_ctx = ""
+            if getattr(state, "draft_report", ""):
+                 draft_ctx = f"\n--- CURRENT DRAFT REPORT ---\n{state.draft_report}\n--- END DRAFT REPORT ---\n"
+            
             prompt = AGENT_RESEARCH_PROMPT.format(
                 topic=state.topic,
                 role=self.config.role,
                 domain=self.config.domain,
                 goal=self.config.goal,
+                draft_context=draft_ctx
             )
             
             response = await self.llm_client.complete(

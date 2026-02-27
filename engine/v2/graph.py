@@ -127,9 +127,29 @@ class ResearchGraphV2:
         self._update_phase("planning")
         
         if state.current_iteration == 0:
-            return {"current_iteration": 1, "status": "researching"}
-        
-        return {"status": "researching"}
+            team_result = await self.orchestrator.propose_team(state)
+            team_manifest = team_result.get("team_manifest", [])
+            
+            if self.hub:
+                self.hub.publish("team_update", agents=[{"role": a.role, "domain": a.domain} for a in team_manifest])
+                
+            return {
+                "current_iteration": 1, 
+                "status": "researching", 
+                "team_manifest": team_manifest,
+                "team_approved": True
+            }
+        else:
+            team_result = await self.orchestrator.replan_team(state)
+            team_manifest = team_result.get("team_manifest", [])
+            
+            if self.hub:
+                self.hub.publish("team_update", agents=[{"role": a.role, "domain": a.domain} for a in team_manifest])
+                
+            return {
+                "status": "researching", 
+                "team_manifest": team_manifest
+            }
     
     async def _research_parallel(self, state: ResearchState) -> Dict[str, Any]:
         """Phase 1: RESEARCH - All agents research in parallel."""
@@ -234,38 +254,6 @@ class ResearchGraphV2:
         
         try:
             self._update_iteration(0, initial_state.max_iterations)
-            self._update_phase("planning")
-            
-            team_result = await self.orchestrator.propose_team(initial_state)
-            team_manifest = team_result["team_manifest"]
-            initial_state.team_manifest = team_manifest
-            
-            if self.hub:
-                self.hub.publish("team_update", agents=[{"role": a.role, "domain": a.domain} for a in team_manifest])
-            
-            # HITL: Team approval
-            prompt = "Approve team? (y/n/add <role>):"
-            if self.hub:
-                response = await self.hub.request_input(prompt)
-            else:
-                response = input(prompt)
-            
-            response = response.strip().lower()
-            
-            if response.startswith("add "):
-                new_role = response[4:].strip()
-                team_manifest.append(AgentConfig(
-                    role=new_role,
-                    domain="Custom",
-                    goal=f"Provide {new_role} perspective",
-                    system_prompt=self.orchestrator._generate_system_prompt(
-                        new_role, "Custom", f"Provide {new_role} perspective"
-                    )
-                ))
-                self._log(f"[dim]Added {new_role}[/dim]")
-            
-            initial_state.team_approved = True
-            initial_state.team_manifest = team_manifest
             
             # Build and run graph
             self.graph = self._build_graph()

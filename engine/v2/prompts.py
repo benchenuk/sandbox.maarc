@@ -90,6 +90,59 @@ The JSON MUST follow this structure:
 CRITICAL: Output ONLY the JSON object. Do not include any text before or after the JSON.
 """
 
+EVALUATE_CONSENSUS_PROMPT = """You are the Research Director evaluating the current state of a report.
+
+Topic: {topic}
+Iteration: {iteration}
+
+--- CURRENT DRAFT REPORT ---
+{draft_report}
+
+--- EXPERT CRITIQUES ---
+{critiques}
+
+Your task is to determine if consensus is reached or if another iteration is needed.
+If there are major flaws, missing perspectives, or unresolved conflicts, you must iterate.
+If they are minor tweaks, consensus is reached.
+
+If you decide to iterate ("IN_PROGRESS"), you MUST update the draft report incorporating the valid critiques. 
+If you decide consensus is reached ("REACHED"), you can just return the current draft.
+
+Output ONLY a valid JSON object in this format:
+{{
+  "decision": "IN_PROGRESS" or "REACHED",
+  "updated_draft": "# Markdown formatted updated report..."
+}}
+"""
+
+REPLAN_TEAM_PROMPT = """You are an expert Project Manager and Domain Analyst.
+
+We are entering a new iteration of research. You must determine the team of experts needed to improve the current draft.
+
+Topic: {topic}
+
+--- CURRENT DRAFT REPORT (UPDATED WITH CRITIQUES) ---
+{draft_report}
+
+--- PREVIOUS TEAM ---
+{previous_team}
+
+Your task:
+Determine 3-5 expert roles needed to address the remaining gaps or conflicts in the draft report.
+You can keep members from the previous team if their deeper analysis is still needed, or bring in new specialists.
+
+For each role, provide:
+- role: The expert title
+- domain: The field of expertise
+- goal: Specific objective for this research (1 sentence)
+
+Output ONLY a valid JSON array. Example format:
+[
+  {{"role": "Labor Economist", "domain": "Economics", "goal": "Analyze workforce demographics and labor market trends"}},
+  ...
+]
+"""
+
 
 
 # =============================================================================
@@ -101,7 +154,7 @@ AGENT_RESEARCH_PROMPT = """Topic: {topic}
 Your Role: {role}
 Your Domain: {domain}
 Your Goal: {goal}
-
+{draft_context}
 Provide your expert analysis of this topic from your specific domain perspective.
 Focus only on aspects within your expertise. Be concise but thorough."""
 
