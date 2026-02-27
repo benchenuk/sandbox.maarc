@@ -127,7 +127,8 @@ class ResearchGraphV2:
         self._update_phase("planning")
         
         if state.current_iteration == 0:
-            team_result = await self.orchestrator.propose_team(state)
+            state.current_iteration += 1
+            team_result = await self.orchestrator.plan_team(state)
             team_manifest = team_result.get("team_manifest", [])
             
             if self.hub:
@@ -234,7 +235,7 @@ class ResearchGraphV2:
     async def _synthesize_wrapper(self, state: ResearchState) -> Dict[str, Any]:
         """Final report synthesis."""
         self._update_phase("finalizing")
-        self._update_agent_status("SYNTHESIZER", "working")
+        self._update_agent_status("SYNTHESIZER", "synthesizing")
         res = await self.synthesizer.generate_report(state)
         self._update_agent_status("SYNTHESIZER", "idle")
         return res

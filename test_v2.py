@@ -109,7 +109,7 @@ async def test_orchestrator_generates_team_dynamically(mock_config):
     
     state = ResearchState(topic="Japanese economy challenges", config=mock_config)
     
-    result = await orchestrator.propose_team(state)
+    result = await orchestrator.plan_team(state)
     
     # Verify team manifest is populated
     assert "team_manifest" in result
@@ -148,7 +148,7 @@ async def test_orchestrator_enforces_max_agents(mock_config):
     orchestrator = OrchestratorNode(mock_llm)
     state = ResearchState(topic="Test", config=mock_config)
     
-    result = await orchestrator.propose_team(state)
+    result = await orchestrator.plan_team(state)
     team = result["team_manifest"]
     
     # Should be truncated to max_agents (5), but Skeptic may be added after
@@ -172,7 +172,7 @@ async def test_orchestrator_adds_required_skeptic(mock_config):
     orchestrator = OrchestratorNode(mock_llm)
     state = ResearchState(topic="Test", config=mock_config)
     
-    result = await orchestrator.propose_team(state)
+    result = await orchestrator.plan_team(state)
     team = result["team_manifest"]
     
     # Should have added Skeptic
@@ -204,7 +204,7 @@ This team should provide comprehensive analysis."""
     orchestrator = OrchestratorNode(mock_llm)
     state = ResearchState(topic="AI regulation", config=mock_config)
     
-    result = await orchestrator.propose_team(state)
+    result = await orchestrator.plan_team(state)
     
     team = result["team_manifest"]
     # 2 agents from LLM + possibly Skeptic if required
@@ -227,7 +227,7 @@ async def test_orchestrator_fallback_on_invalid_json(mock_config):
     orchestrator = OrchestratorNode(mock_llm)
     state = ResearchState(topic="Test topic", config=mock_config)
     
-    result = await orchestrator.propose_team(state)
+    result = await orchestrator.plan_team(state)
     
     # Should have fallback team
     team = result["team_manifest"]

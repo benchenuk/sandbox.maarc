@@ -113,7 +113,7 @@ class AgentCard(Static):
     """Agent list item with status indicator with animated blinking."""
     
     # Statuses that indicate "working" and should have blinking indicator
-    WORKING_STATUSES = {"research", "critique", "drafting", "evaluating", "planning"}
+    WORKING_STATUSES = {"researching", "critiquing", "drafting", "evaluating", "planning", "synthesizing"}
     # Blink interval in seconds
     BLINK_INTERVAL = 0.5
     
@@ -156,12 +156,12 @@ class AgentCard(Static):
         
         # Status color mapping
         status_colors = {
-            "research": "cyan",
-            "critique": "yellow", 
+            "researching": "cyan",
+            "critiquing": "yellow", 
             "drafting": "blue",
             "evaluating": "magenta",
             "planning": "magenta",
-            "working": "green",
+            "synthesizing": "green",
         }
         status_color = status_colors.get(status_lower, "dim")
         

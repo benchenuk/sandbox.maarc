@@ -73,14 +73,13 @@ class OrchestratorNode:
         if self.hub:
             self.hub.publish("agent_update", role=role, status=status)
     
-    async def propose_team(self, state: ResearchState) -> Dict[str, Any]:
+    async def plan_team(self, state: ResearchState) -> Dict[str, Any]:
         """
         Propose a team of agents for the research topic.
-        Iteration 2: Uses LLM to dynamically generate domain-specific team.
         """
         self._update_status("ORCHESTRATOR", "planning")
         try:
-            self._log(f"[magenta]Orchestrator[/magenta]: planning team")
+            self._log(f"[magenta]Orchestrator[/magenta]: planning team for iteration {state.current_iteration}")
             
             # Generate team using LLM
             prompt = TEAM_GENERATION_PROMPT.format(topic=state.topic)
@@ -540,7 +539,7 @@ class OrchestratorNode:
             except (json.JSONDecodeError, ValueError) as e:
                 self._log(f"[red]Orchestrator: failed to parse evaluation JSON: {e}[/red]")
                 # Save failed response for debugging
-                save_debug_output(state, f"failed_evaluation_response_iter_{state.current_iteration}", response, self._log)
+                # save_debug_output(state, f"failed_evaluation_response_iter_{state.current_iteration}", response, self._log)
                 
                 # Fallback to loop if we can't parse, just returning old draft
                 return {
