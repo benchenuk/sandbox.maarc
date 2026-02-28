@@ -164,21 +164,43 @@ class ResearchGraphV2:
         results = await asyncio.gather(*tasks, return_exceptions=True)
         
         all_outputs = {}
+        all_summaries = {}
         for agent_config, result in zip(state.team_manifest, results):
             if isinstance(result, Exception):
                 self._log(f"[red]{agent_config.role}: error[/red]")
                 all_outputs[agent_config.role] = f"Error: {result}"
             else:
-                all_outputs.update(result)
+                all_outputs.update(result.get("agent_outputs", {}))
+                all_summaries.update(result.get("agent_summaries", {}))
         
-        self._log(f"Collected {len(all_outputs)} outputs")
-        return {"agent_outputs": all_outputs, "status": "synthesizing"}
+        self._log(f"Collected {len(all_outputs)} outputs, {len(all_summaries)} summaries")
+        
+        return {
+            "agent_outputs": all_outputs,
+            "agent_summaries": all_summaries,
+            "status": "synthesizing"
+        }
     
-    async def _run_agent_research(self, state: ResearchState, agent_config: AgentConfig) -> Dict[str, str]:
-        """Run a single agent's research."""
+    async def _run_agent_research(self, state: ResearchState, agent_config: AgentConfig) -> Dict[str, Any]:
+        """Run a single agent's research and display summary immediately."""
         agent = AgentNode(self.llm_client, agent_config, hub=self.hub)
         result = await agent.research(state)
-        return result.get("agent_outputs", {})
+        
+        # Display summary immediately as it completes
+        agent_summaries = result.get("agent_summaries", {})
+        if agent_summaries and agent_config.role in agent_summaries:
+            summary = agent_summaries[agent_config.role]
+            if summary:
+                from engine.v2.formatting import format_agent_summaries_pane
+                self._log(format_agent_summaries_pane(
+                    {agent_config.role: summary}, 
+                    title=f"Summary - {agent_config.role}"
+                ))
+        
+        return {
+            "agent_outputs": result.get("agent_outputs", {}),
+            "agent_summaries": agent_summaries
+        }
     
     async def _draft_report_phase(self, state: ResearchState) -> Dict[str, Any]:
         """Phase 2: DRAFT REPORT - Orchestrator creates comprehensive draft."""
@@ -201,20 +223,42 @@ class ResearchGraphV2:
         results = await asyncio.gather(*tasks, return_exceptions=True)
         
         all_critiques = {}
+        all_actionables = {}
         for agent_config, result in zip(state.team_manifest, results):
             if isinstance(result, Exception):
                 self._log(f"[red]{agent_config.role}: error[/red]")
             else:
-                all_critiques.update(result)
+                all_critiques.update(result.get("draft_critiques", {}))
+                all_actionables.update(result.get("critique_summaries", {}))
         
-        self._log(f"Collected {len(all_critiques)} critiques")
-        return {"draft_critiques": all_critiques, "status": "evaluating"}
+        self._log(f"Collected {len(all_critiques)} critiques, {len(all_actionables)} actionables")
+        
+        return {
+            "draft_critiques": all_critiques,
+            "critique_summaries": all_actionables,
+            "status": "evaluating"
+        }
     
-    async def _run_agent_critique(self, state: ResearchState, agent_config: AgentConfig) -> Dict[str, str]:
-        """Run a single agent's critique of the draft report."""
+    async def _run_agent_critique(self, state: ResearchState, agent_config: AgentConfig) -> Dict[str, Any]:
+        """Run a single agent's critique and display actionables immediately."""
         agent = AgentNode(self.llm_client, agent_config, hub=self.hub)
         result = await agent.critique_draft(state)
-        return result.get("draft_critiques", {})
+        
+        # Display actionables immediately as it completes
+        critique_summaries = result.get("critique_summaries", {})
+        if critique_summaries and agent_config.role in critique_summaries:
+            actionables = critique_summaries[agent_config.role]
+            if actionables:
+                from engine.v2.formatting import format_agent_summaries_pane
+                self._log(format_agent_summaries_pane(
+                    {agent_config.role: actionables},
+                    title=f"Actionables - {agent_config.role}"
+                ))
+        
+        return {
+            "draft_critiques": result.get("draft_critiques", {}),
+            "critique_summaries": critique_summaries
+        }
     
     async def _evaluate_phase(self, state: ResearchState) -> Dict[str, Any]:
         """Phase 4: DECISION - Orchestrator evaluates and decides."""

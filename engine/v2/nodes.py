@@ -20,6 +20,8 @@ from engine.v2.prompts import (
     EVALUATE_CONSENSUS_PROMPT,
     REPLAN_TEAM_PROMPT,
 )
+from engine.v2.formatting import format_team_pane, format_takeaways_pane, format_agent_summaries_pane
+from engine.v2.parsing import parse_json_response
 from engine.models.llm_client import LLMClient
 
 logger = logging.getLogger("engine.nodes")
@@ -175,47 +177,7 @@ class OrchestratorNode:
                 ))
             
             self._log(f"Team: {', '.join(a.role for a in team)}")
-            
-            # Log team details with subtle background shading in a uniform pane
-            import textwrap
-            
-            # 1. Calculate ideal pane width based on content, with a min/max bound
-            # Since roles and goals are on separate lines, we find the longest single line
-            max_natural = 0
-            for a in team_data:
-                role_len = len(a.get("role", "Expert")) + 2
-                goal_len = len(a.get("goal", "Analyze the topic")) + 2
-                max_natural = max(max_natural, role_len, goal_len)
-            
-            pane_width = min(max(max_natural + 4, 80), 100)
-            text_width = pane_width - 4
-            
-            bg_style = "on grey23"
-            text_style = "grey82"
-            
-            # 2. Build the pane
-            team_lines = [f"[{bg_style}]" + " " * pane_width + f"[/{bg_style}]"]
-            for agent_data in team_data:
-                role = agent_data.get("role", "Expert")
-                goal = agent_data.get("goal", "Analyze the topic")
-                
-                # 1. Role Line (Bold)
-                padding_role = " " * (pane_width - (len(role) + 2))
-                team_lines.append(f"[{text_style} {bg_style}]  [bold]{role}[/bold]{padding_role}[/{text_style} {bg_style}]")
-                
-                # 2. Goal Text (Wrapped)
-                wrapped_goal = textwrap.wrap(goal, width=text_width)
-                for line in wrapped_goal:
-                    content = f"  {line}"
-                    padding = " " * (pane_width - len(content))
-                    team_lines.append(f"[{text_style} {bg_style}]{content}{padding}[/{text_style} {bg_style}]")
-                
-                # 3. Add a small gap between agents (except maybe the last one)
-                team_lines.append(f"[{bg_style}]" + " " * pane_width + f"[/{bg_style}]")
-            
-            team_lines.append(f"[{bg_style}]" + " " * pane_width + f"[/{bg_style}]")
-            
-            self._log("\n".join(team_lines))
+            self._log(format_team_pane(team_data))
             
             return {
                 "team_manifest": team,
@@ -327,38 +289,7 @@ class OrchestratorNode:
                 ))
             
             self._log(f"Team: {', '.join(a.role for a in team)}")
-            
-            # Paning
-            import textwrap
-            max_natural = 0
-            for a in team_data:
-                role_len = len(a.get("role", "Expert")) + 2
-                goal_len = len(a.get("goal", "Analyze the topic")) + 2
-                max_natural = max(max_natural, role_len, goal_len)
-            
-            pane_width = min(max(max_natural + 4, 80), 100)
-            text_width = pane_width - 4
-            bg_style = "on grey23"
-            text_style = "grey82"
-            
-            team_lines = [f"[{bg_style}]" + " " * pane_width + f"[/{bg_style}]"]
-            for agent_data in team_data:
-                role = agent_data.get("role", "Expert")
-                goal = agent_data.get("goal", "Analyze the topic")
-                
-                padding_role = " " * (pane_width - (len(role) + 2))
-                team_lines.append(f"[{text_style} {bg_style}]  [bold]{role}[/bold]{padding_role}[/{text_style} {bg_style}]")
-                
-                wrapped_goal = textwrap.wrap(goal, width=text_width)
-                for line in wrapped_goal:
-                    content = f"  {line}"
-                    padding = " " * (pane_width - len(content))
-                    team_lines.append(f"[{text_style} {bg_style}]{content}{padding}[/{text_style} {bg_style}]")
-                
-                team_lines.append(f"[{bg_style}]" + " " * pane_width + f"[/{bg_style}]")
-            
-            team_lines.append(f"[{bg_style}]" + " " * pane_width + f"[/{bg_style}]")
-            self._log("\n".join(team_lines))
+            self._log(format_team_pane(team_data))
             
             return {
                 "team_manifest": team,
@@ -429,31 +360,7 @@ class OrchestratorNode:
             
             if takeaways:
                 self._log(f"[dim]Summarised in {len(takeaways)} key takeaways ...[/dim]")
-                import textwrap
-                
-                # Calculate ideal pane width based on content
-                max_natural = max((len(f"• {t}") for t in takeaways), default=0)
-                # Use a more conservative max width (100 instead of 140) to prevent wrapping jaggedness
-                pane_width = min(max(max_natural + 8, 80), 100)
-                text_width = pane_width - 8  # Account for margins and bullets
-                
-                bg_style = "on grey23"
-                text_style = "grey82"
-                
-                takeaway_lines = [f"[{bg_style}]" + " " * pane_width + f"[/{bg_style}]"]
-                takeaway_lines.append(f"[{text_style} {bg_style}]  [bold]Key Takeaways:[/bold]{' ' * (pane_width - 17)}[/{text_style} {bg_style}]")
-                takeaway_lines.append(f"[{bg_style}]" + " " * pane_width + f"[/{bg_style}]")
-                
-                for t in takeaways:
-                    wrapped_lines = textwrap.wrap(t, width=text_width)
-                    for i, line in enumerate(wrapped_lines):
-                        prefix = "  • " if i == 0 else "    "
-                        content = f"{prefix}{line}"
-                        padding = " " * (pane_width - len(content))
-                        takeaway_lines.append(f"[{text_style} {bg_style}]{content}{padding}[/{text_style} {bg_style}]")
-                
-                takeaway_lines.append(f"[{bg_style}]" + " " * pane_width + f"[/{bg_style}]")
-                self._log("\n".join(takeaway_lines))
+                self._log(format_takeaways_pane(takeaways))
 
             return {
                 "draft_report": report_content,
@@ -596,7 +503,6 @@ class AgentNode:
                 provider=self.config.provider,
                 model=self.config.model,
                 temperature=self.config.temperature,
-                max_tokens=800
             )
             
             output_key = self.config.role
@@ -604,10 +510,19 @@ class AgentNode:
             # Sanitization of role is already handled by AgentConfig pydantic validation
             save_debug_output(state, f"agent_research_{self.config.role}", response, self._log)
             
-            self._log(f"[cyan]{self.config.role}[/cyan]: done ({len(response)} chars)")
+            # Parse JSON response to extract main content and summary
+            research_result, executive_summary = parse_json_response(
+                response, 
+                main_field="main",
+                summary_field="summary",
+                fallback=response
+            )
+            
+            self._log(f"[cyan]{self.config.role}[/cyan]: done ({len(research_result)} chars)")
             
             return {
-                "agent_outputs": {output_key: response}
+                "agent_outputs": {output_key: research_result},
+                "agent_summaries": {output_key: executive_summary} if executive_summary else {}
             }
         finally:
             self._update_status("idle")
@@ -678,14 +593,23 @@ class AgentNode:
                 provider=self.config.provider,
                 model=self.config.model,
                 temperature=self.config.temperature,
-                max_tokens=800
             )
             
             save_debug_output(state, f"agent_critique_{self.config.role}", response, self._log)
-            self._log(f"[yellow]{self.config.role}[/yellow]: done ({len(response)} chars)")
+            
+            # Parse JSON response to extract main content and summary
+            critique, actionables = parse_json_response(
+                response,
+                main_field="main",
+                summary_field="summary",
+                fallback=response
+            )
+            
+            self._log(f"[yellow]{self.config.role}[/yellow]: done ({len(critique)} chars)")
             
             return {
-                "draft_critiques": {self.config.role: response}
+                "draft_critiques": {self.config.role: critique},
+                "critique_summaries": {self.config.role: actionables} if actionables else {}
             }
         finally:
             self._update_status("idle")

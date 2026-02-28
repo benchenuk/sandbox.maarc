@@ -156,7 +156,14 @@ Your Domain: {domain}
 Your Goal: {goal}
 {draft_context}
 Provide your expert analysis of this topic from your specific domain perspective.
-Focus only on aspects within your expertise. Be concise but thorough."""
+Focus only on aspects within your expertise. Be concise but thorough.
+
+OUTPUT FORMAT:
+Return your response as a valid JSON object with the following structure:
+{{
+  "main": "Your detailed expert analysis here (2-3 paragraphs)",
+  "summary": "2-3 sentences summarizing the key takeaways"
+}}"""
 
 
 # Legacy: Agent-to-agent critique (not used in current workflow)
@@ -196,10 +203,12 @@ Review this draft report and provide feedback, for example:
 
 Be specific, constructive, and reference sections when possible.
 
-CRITICAL REQUIREMENT: 
-- You MUST include a final section titled "EXECUTIVE ADVICES FOR ACTIONS". 
-  - In this section, provide specific, actionable advice(s) for any updates to the draft report, if applicable. 
-  - For example, what must be added, corrected, what may be sufficient to be mentioned, what gaps must be researched further, etc. """
+OUTPUT FORMAT:
+Return your response as a valid JSON object with the following structure:
+{{
+  "main": "Your detailed critique here (2-3 paragraphs covering accuracy, completeness, conflicts, recommendations)",
+  "summary": "2-3 sentences of specific, actionable advice for updates to the draft report. For example: what must be added, corrected, mentioned briefly, or researched further, etc."
+}}"""
 
 
 # =============================================================================
