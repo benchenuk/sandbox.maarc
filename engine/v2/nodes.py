@@ -196,8 +196,14 @@ class OrchestratorNode:
             
             prev_team_text = json.dumps([{"role": a.role, "domain": a.domain, "goal": a.goal} for a in state.team_manifest], indent=2)
             
+            # Calculate iterations remaining
+            iterations_remaining = state.max_iterations - state.current_iteration
+            
             prompt = REPLAN_TEAM_PROMPT.format(
                 topic=state.topic,
+                iteration=state.current_iteration,
+                max_iterations=state.max_iterations,
+                iterations_remaining=iterations_remaining,
                 draft_report=state.draft_report,
                 previous_team=prev_team_text
             )
@@ -394,9 +400,14 @@ class OrchestratorNode:
             for role, critique in getattr(state, 'draft_critiques', {}).items():
                 critiques_text.append(f"## Critique from {role}\n{critique}")
                 
+            # Calculate iterations remaining
+            iterations_remaining = state.max_iterations - state.current_iteration
+            
             prompt = EVALUATE_CONSENSUS_PROMPT.format(
                 topic=state.topic,
                 iteration=state.current_iteration,
+                max_iterations=state.max_iterations,
+                iterations_remaining=iterations_remaining,
                 draft_report=state.draft_report,
                 critiques="\n\n".join(critiques_text) if critiques_text else "No critiques provided."
             )

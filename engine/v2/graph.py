@@ -194,7 +194,7 @@ class ResearchGraphV2:
                 from engine.v2.formatting import format_agent_summaries_pane
                 self._log(format_agent_summaries_pane(
                     {agent_config.role: summary}, 
-                    title=f"Summary - {agent_config.role}"
+                    title="Summary"
                 ))
         
         return {
@@ -252,7 +252,7 @@ class ResearchGraphV2:
                 from engine.v2.formatting import format_agent_summaries_pane
                 self._log(format_agent_summaries_pane(
                     {agent_config.role: actionables},
-                    title=f"Actionables - {agent_config.role}"
+                    title="Actionables"
                 ))
         
         return {

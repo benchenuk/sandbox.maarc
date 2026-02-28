@@ -93,7 +93,8 @@ CRITICAL: Output ONLY the JSON object. Do not include any text before or after t
 EVALUATE_CONSENSUS_PROMPT = """You are the Research Director evaluating the current state of a report.
 
 Topic: {topic}
-Iteration: {iteration}
+Iteration: {iteration} of {max_iterations}
+Iterations Remaining: {iterations_remaining}
 
 --- CURRENT DRAFT REPORT ---
 {draft_report}
@@ -103,7 +104,14 @@ Iteration: {iteration}
 
 Your task is to determine if consensus is reached or if another iteration is needed.
 If there are major flaws, missing perspectives, or unresolved conflicts, you must iterate.
-If they are minor tweaks, consensus is reached.
+If they are minor tweaks, consensus is reached. 
+- "Agree to disagree" is more than acceptable as long as fair arguments are presented objectively. 
+- Balance between depth and width of the research with respect to the iterations to be carried out. 
+
+Be aware of the iteration budget:
+- If this is the second to the final iteration (one last remaining), you should try to converge unless there are critical errors.
+- If multiple iterations remain, be more willing to iterate to improve quality.
+- Balance team composition against the iterations available - fewer remaining iterations means focusing on convergence rather than exploration.
 
 If you decide to iterate ("IN_PROGRESS"), you MUST update the draft report incorporating the valid critiques. 
 If you decide consensus is reached ("REACHED"), you can just return the current draft.
@@ -120,6 +128,8 @@ REPLAN_TEAM_PROMPT = """You are a Research Director.
 We are entering a new iteration of research. You need to determine the team of experts needed to improve the current draft.
 
 Topic: {topic}
+Iteration: {iteration} of {max_iterations}
+Iterations Remaining: {iterations_remaining}
 
 --- CURRENT DRAFT REPORT (UPDATED WITH CRITIQUES) ---
 {draft_report}
@@ -130,6 +140,11 @@ Topic: {topic}
 Your task:
 Determine 3-5 expert roles needed to address the remaining gaps or conflicts in the draft report.
 You can keep members from the previous team if their deeper analysis is still needed, or bring in new specialists.
+
+Be aware of the iteration budget when planning the team:
+- If this is the final iteration (no more remaining), prioritize specialists who can finalize and polish the report.
+- If multiple iterations remain, you can bring in diverse perspectives to explore the topic more deeply.
+- Balance team composition against the iterations available - fewer remaining iterations means focusing on convergence rather than exploration.
 
 For each role, provide:
 - role: The expert title
