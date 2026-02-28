@@ -481,7 +481,7 @@ class AgentNode:
         """
         Conduct initial research on the topic.
         """
-        self._update_status("research")
+        self._update_status("researching")
         try:
             self._log(f"[cyan]{self.config.role}[/cyan]: starting research")
             
@@ -531,7 +531,7 @@ class AgentNode:
         """
         Critique another agent's output.
         """
-        self._update_status("Working")
+        self._update_status("critiquing")
         try:
             target_output = state.get_agent_output(target_role)
             if not target_output:
@@ -565,13 +565,13 @@ class AgentNode:
                 "agent_outputs": {output_key: response}
             }
         finally:
-            self._update_status("Idle")
+            self._update_status("idle")
     
     async def critique_draft(self, state: ResearchState) -> Dict[str, Any]:
         """
         Phase 3: Critique the orchestrator's draft report.
         """
-        self._update_status("critique")
+        self._update_status("critiquing")
         try:
             draft = getattr(state, 'draft_report', '')
             if not draft:
@@ -633,7 +633,7 @@ class SynthesisNode:
     async def generate_report(self, state: ResearchState) -> Dict[str, Any]:
         """Generate comprehensive final report using all available inputs."""
         if self.hub:
-            self.hub.publish("agent_update", role="SYNTHESIZER", status="working")
+            self.hub.publish("agent_update", role="SYNTHESIZER", status="synthesizing")
         try:
             self._log("[magenta]Synthesizer[/magenta]: generating final report")
             
