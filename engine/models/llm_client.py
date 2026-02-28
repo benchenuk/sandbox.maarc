@@ -8,15 +8,12 @@ import logging
 import os
 from typing import Any, Dict, Optional
 
-import logging
-import os
-from typing import Any, Dict, Optional
-
 # Remove global console and basicConfig that write to stdout/stderr
 logger = logging.getLogger("engine.llm")
 
 try:
     from langchain_openai import ChatOpenAI
+    from langchain_core.rate_limiters import InMemoryRateLimiter
     LANGCHAIN_AVAILABLE = True
 except ImportError:
     LANGCHAIN_AVAILABLE = False
@@ -32,6 +29,31 @@ class LLMClient:
     def __init__(self, config: Dict[str, Any]):
         self.config = config
         self._llm_cache: Dict[str, ChatOpenAI] = {}
+        
+        # Initialize rate limiter if configured
+        self._rate_limiter = self._create_rate_limiter()
+    
+    def _create_rate_limiter(self) -> Optional[Any]:
+        """Create rate limiter based on configuration."""
+        if not LANGCHAIN_AVAILABLE:
+            return None
+        
+        # Check if rate limiting is configured
+        rate_limit_config = self.config.get("app", {}).get("rate_limit", {})
+        if not rate_limit_config.get("enabled", False):
+            return None
+        
+        requests_per_second = rate_limit_config.get("requests_per_second", 1.0)
+        check_every_n_seconds = rate_limit_config.get("check_every_n_seconds", 0.1)
+        max_bucket_size = rate_limit_config.get("max_bucket_size", 10)
+        
+        logger.info(f"[dim]Rate limiter enabled: {requests_per_second} req/s[/dim]")
+        
+        return InMemoryRateLimiter(
+            requests_per_second=requests_per_second,
+            check_every_n_seconds=check_every_n_seconds,
+            max_bucket_size=max_bucket_size,
+        )
 
     def _get_provider_config(self, provider_name: str) -> Dict[str, Any]:
         """Get provider config by name."""
@@ -59,13 +81,20 @@ class LLMClient:
         
         if cache_key not in self._llm_cache:
             base_url, api_key, _ = self._get_connection_params(provider_name)
-            self._llm_cache[cache_key] = ChatOpenAI(
-                model=model,
-                temperature=temperature,
-                max_tokens=max_tokens,
-                base_url=base_url,
-                api_key=api_key,
-            )
+            
+            # Build kwargs, including rate limiter if configured
+            kwargs = {
+                "model": model,
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+                "base_url": base_url,
+                "api_key": api_key,
+            }
+            
+            if self._rate_limiter is not None:
+                kwargs["rate_limiter"] = self._rate_limiter
+            
+            self._llm_cache[cache_key] = ChatOpenAI(**kwargs)
         
         return self._llm_cache[cache_key]
 

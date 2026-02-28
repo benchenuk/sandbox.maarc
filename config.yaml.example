@@ -7,6 +7,14 @@ app:
   version: 0.3.0
   debug:
     save_output: false
+  
+  # Rate Limiting - Control API request frequency to avoid provider rate limits
+  # Enable this when running parallel agents with providers that have strict limits
+  rate_limit:
+    enabled: false  # Set to true to enable rate limiting
+    requests_per_second: 1.0  # Max requests per second (e.g., 0.5 = 1 request every 2 seconds)
+    check_every_n_seconds: 0.1  # How often to check if request can proceed
+    max_bucket_size: 10  # Maximum burst capacity
 
 research:
   # Iteration settings

@@ -139,8 +139,8 @@ class MaarcApp(App):
         """Update agent team list - includes orchestrator and synthesizer by default."""
         # Add system agents to the list
         all_agents = [
-            {"role": "ORCHESTRATOR", "domain": "System", "status": "idle"},
-            {"role": "SYNTHESIZER", "domain": "System", "status": "idle"},
+            {"role": "orchestrator", "domain": "System", "status": "idle"},
+            {"role": "synthesizer", "domain": "System", "status": "idle"},
         ] + agents
         self.call_from_thread(self.team_widget.update_team, all_agents)
 
