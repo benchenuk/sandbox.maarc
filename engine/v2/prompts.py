@@ -102,7 +102,7 @@ Iterations Remaining: {iterations_remaining}
 --- EXPERT CRITIQUES ---
 {critiques}
 
-Your task is to determine if consensus is reached or if another iteration is needed.
+Your task is to determine if consensus is reached or if another iteration is needed, AND to draft an updated report incorporating the critiques.
 If there are major flaws, missing perspectives, or unresolved conflicts, you must iterate.
 If they are minor tweaks, consensus is reached. 
 - "Agree to disagree" is more than acceptable as long as fair arguments are presented objectively. 
@@ -113,8 +113,17 @@ Be aware of the iteration budget:
 - If multiple iterations remain, be more willing to iterate to improve quality.
 - Balance team composition against the iterations available - fewer remaining iterations means focusing on convergence rather than exploration.
 
-If you decide to iterate ("IN_PROGRESS"), you MUST update the draft report incorporating the valid critiques. 
-If you decide consensus is reached ("REACHED"), you can just return the current draft.
+Regardless of your decision ("IN_PROGRESS" or "REACHED"), you MUST explicitly provide an updated draft report.
+If "IN_PROGRESS", the updated draft will be fed into the next iteration.
+If "REACHED", the updated draft will be polished by the Synthesizer for the final report.
+
+### Guidelines for 'updated_draft':
+1. Use professional Markdown formatting.
+2. Structure: Executive Summary, Background & Context, Key Findings (themed), Critical Analysis (Agreement/Conflict/Risk), Recommendations, and Knowledge Gaps.
+3. Synthesize viewpoints; do not list "Agent A said...".
+4. Explicitly acknowledge conflicts and gaps.
+5. Accommodate experts' views rather than imposing your own.
+6. Incorporate actionable insights and corrections from the critiques.
 
 Output ONLY a valid JSON object in this format:
 {{
@@ -176,7 +185,7 @@ Focus only on aspects within your expertise. Be concise but thorough.
 OUTPUT FORMAT:
 Return your response as a valid JSON object with the following structure:
 {{
-  "main": "Your detailed expert analysis here (2-3 paragraphs)",
+  "main": "Your resear report here",
   "summary": "2-3 sentences summarizing the key takeaways"
 }}"""
 
@@ -232,7 +241,7 @@ Return your response as a valid JSON object with the following structure:
 
 FINAL_REPORT_PROMPT = """You are an expert Technical Writer and Research Synthesizer.
 
-Your task: Write a polished FINAL REPORT based on all research, the draft, and critiques.
+Your task: Write a polished FINAL REPORT based on the latest updated draft.
 
 TOPIC: {topic}
 ITERATIONS: {iteration}
@@ -240,21 +249,9 @@ CONSENSUS STATUS: {consensus_status}
 
 ---
 
-ORIGINAL RESEARCH FINDINGS FROM DOMAIN EXPERTS:
-
-{research_outputs}
-
----
-
-DRAFT REPORT (Orchestrator's comprehensive synthesis):
+LATEST DRAFT REPORT (Orchestrator's comprehensive synthesis):
 
 {draft_report}
-
----
-
-AGENT CRITIQUES OF THE DRAFT:
-
-{critiques}
 
 ---
 
@@ -269,7 +266,7 @@ Write a professional FINAL REPORT with the following structure:
 - Scope of the research
 
 # Key Findings
-- Organized by theme (not by individual agent)
+- Organized by theme
 - Synthesize convergent viewpoints
 - Highlight important divergences
 
@@ -286,9 +283,9 @@ Write a professional FINAL REPORT with the following structure:
 
 Guidelines:
 - Start from the draft report as your baseline
-- Incorporate valid critiques (accuracy, completeness, conflicts)
-- Use original research to verify and expand where needed
-- Write in a unified voice (not "Agent A said... Agent B said...")
+- The draft report already incorporates domain experts' research and critiques
+- Ensure the language evaluates all topics consistently and reads cohesively
+- Write in a unified voice
 - Be comprehensive but concise
 - Use professional academic/business tone
 """

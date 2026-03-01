@@ -436,9 +436,14 @@ class OrchestratorNode:
                 
                 if decision == "REACHED":
                     self._log("[green]Consensus REACHED[/green]")
+                    
+                    # Save the updated draft for debug/record
+                    save_debug_output(state, f"draft_report_final_iter_{state.current_iteration}", updated_draft, self._log)
+                    
                     return {
                         "current_iteration": new_iteration,
                         "consensus_status": "REACHED",
+                        "draft_report": updated_draft,
                         "status": "completed"
                     }
                 else:
@@ -642,36 +647,21 @@ class SynthesisNode:
             getattr(logger, level)(message)
     
     async def generate_report(self, state: ResearchState) -> Dict[str, Any]:
-        """Generate comprehensive final report using all available inputs."""
+        """Generate comprehensive final report using the latest draft report."""
         if self.hub:
             self.hub.publish("agent_update", role="SYNTHESIZER", status="synthesizing")
         try:
             self._log("[magenta]Synthesizer[/magenta]: generating final report")
             
-            # Gather all research outputs (not critiques)
-            research_outputs = []
-            for role, output in state.agent_outputs.items():
-                if "_critique" not in role and "_critique" not in role:
-                    research_outputs.append(f"### {role}\n{output}")
-            
-            # Get draft report and critiques
+            # Get draft report which now incorporates all research and critiques
             draft_report = getattr(state, 'draft_report', '')
-            draft_critiques = getattr(state, 'draft_critiques', {})
-            
-            # Format critiques
-            critiques_text = []
-            for agent, critique in draft_critiques.items():
-                critiques_text.append(f"### Critique from {agent}\n{critique}")
             
             # Build synthesis prompt
-            critiques_text_str = "\n".join(critiques_text) if critiques_text else "No critiques recorded."
             prompt = FINAL_REPORT_PROMPT.format(
                 topic=state.topic,
                 iteration=state.current_iteration,
                 consensus_status=state.consensus_status,
-                research_outputs="\n".join(research_outputs),
                 draft_report=draft_report if draft_report else "[No draft available]",
-                critiques=critiques_text_str,
             )
 
             # Get synthesizer config
