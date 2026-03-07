@@ -160,8 +160,8 @@ async def test_orchestrator_enforces_max_agents(mock_config):
 
 
 @pytest.mark.asyncio
-async def test_orchestrator_adds_required_skeptic(mock_config):
-    """Test that orchestrator adds Skeptic when required and missing"""
+async def test_orchestrator_no_longer_adds_skeptic_automatically(mock_config):
+    """Test that orchestrator NO LONGER adds Skeptic automatically (user's request)"""
     mock_llm = MagicMock()
     
     # Mock response without a Skeptic
@@ -176,11 +176,11 @@ async def test_orchestrator_adds_required_skeptic(mock_config):
     result = await orchestrator.plan_team(state)
     team = result["team_manifest"]
     
-    # Should have added Skeptic
+    # Should NOT have added Skeptic
     roles = [a.role for a in team]
-    assert any("skeptic" in r.lower() for r in roles), "Skeptic should be added when required"
+    assert not any("skeptic" in r.lower() for r in roles), "Skeptic should NOT be added automatically"
     
-    print("\n✓ Orchestrator adds required Skeptic when missing")
+    print("\n✓ Orchestrator no longer adds Skeptic automatically")
 
 
 @pytest.mark.asyncio
@@ -218,8 +218,8 @@ This team should provide comprehensive analysis."""
 
 
 @pytest.mark.asyncio
-async def test_orchestrator_fallback_on_invalid_json(mock_config):
-    """Test that orchestrator falls back to default team on invalid LLM response"""
+async def test_orchestrator_fails_on_invalid_json(mock_config):
+    """Test that orchestrator raises ValueError on invalid LLM response (no fallback)"""
     mock_llm = MagicMock()
     
     # Mock invalid JSON response
@@ -228,13 +228,10 @@ async def test_orchestrator_fallback_on_invalid_json(mock_config):
     orchestrator = OrchestratorNode(mock_llm)
     state = ResearchState(topic="Test topic", config=mock_config)
     
-    result = await orchestrator.plan_team(state)
+    with pytest.raises(ValueError, match="Failed to parse team JSON"):
+        await orchestrator.plan_team(state)
     
-    # Should have fallback team
-    team = result["team_manifest"]
-    assert len(team) >= 2  # Fallback has at least 2 agents
-    
-    print("\n✓ Orchestrator falls back to default team on invalid JSON")
+    print("\n✓ Orchestrator fails on invalid JSON as requested")
 
 
 @pytest.mark.asyncio

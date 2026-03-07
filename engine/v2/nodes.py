@@ -97,87 +97,7 @@ class OrchestratorNode:
                 max_tokens=1500
             )
             
-            # Parse JSON response
-            try:
-                # Extract JSON from response (handle potential markdown code blocks)
-                json_str = response
-                if "```json" in response:
-                    json_str = response.split("```json")[1].split("```")[0].strip()
-                elif "```" in response:
-                    json_str = response.split("```")[1].split("```")[0].strip()
-                
-                team_data = json.loads(json_str)
-                
-                if not isinstance(team_data, list):
-                    raise ValueError("Expected JSON array of agents")
-                
-            except (json.JSONDecodeError, ValueError) as e:
-                self._log(f"[yellow]Orchestrator: failed to parse team JSON: {e}[/yellow]")
-                
-                # Fallback to default team
-                team_data = [
-                    {"role": "Domain Expert", "domain": "General Analysis", "goal": "Provide comprehensive analysis"},
-                    {"role": "Skeptic", "domain": "Critical Analysis", "goal": "Challenge assumptions and identify risks"}
-                ]
-            
-            # Get team generation constraints
-            team_gen = state.config.get("orchestrator", {}).get("team_generation", {})
-            min_agents = team_gen.get("min_agents", 3)
-            max_agents = team_gen.get("max_agents", 5)
-            require_skeptic = team_gen.get("require_skeptic", True)
-            
-            # Enforce max_agents limit
-            if len(team_data) > max_agents:
-                team_data = team_data[:max_agents]
-            
-            # Check for skeptic
-            has_skeptic = any("skeptic" in str(a.get("role", "")).lower() for a in team_data)
-            if require_skeptic and not has_skeptic:
-                team_data.append({
-                    "role": "Skeptic",
-                    "domain": "Critical Analysis",
-                    "goal": "Challenge assumptions and identify risks"
-                })
-            
-            # Enforce min_agents by adding generic experts if needed
-            while len(team_data) < min_agents:
-                team_data.append({
-                    "role": f"Domain Expert {len(team_data)}",
-                    "domain": "General Analysis",
-                    "goal": "Provide additional perspective"
-                })
-            
-            # Convert to AgentConfig objects with generated system prompts
-            team = []
-            for agent_data in team_data:
-                role = agent_data.get("role", "Expert")
-                domain = agent_data.get("domain", "General")
-                goal = agent_data.get("goal", "Analyze the topic")
-                
-                # Generate system prompt for this role
-                system_prompt = self._generate_system_prompt(role, domain, goal)
-                
-                # Get agent provider config for spawned agents
-                from engine.utils.config import get_agent_providers, get_provider_config
-                agent_providers = get_agent_providers(state.config)
-                agent_cfg = agent_providers.get("default", {})
-                agent_prov = agent_cfg.get("provider")
-                
-                prov_cfg = get_provider_config(state.config, agent_prov)
-                agent_model = prov_cfg.get("default_model", "gpt-4o")
-                
-                team.append(AgentConfig(
-                    role=role,
-                    domain=domain,
-                    goal=goal,
-                    system_prompt=system_prompt,
-                    provider=agent_prov,
-                    model=agent_model,
-                    temperature=agent_cfg.get("temperature", 0.7) if "skeptic" not in role.lower() else 0.8
-                ))
-            
-            self._log(f"Team: {', '.join(a.role for a in team)}")
-            self._log(format_team_pane(team_data))
+            team = self._parse_and_configure_team(response, state)
             
             return {
                 "team_manifest": team,
@@ -218,84 +138,7 @@ class OrchestratorNode:
                 max_tokens=1500
             )
             
-            # Parse JSON response
-            try:
-                # Extract JSON from response (handle potential markdown code blocks)
-                json_str = response
-                if "```json" in response:
-                    json_str = response.split("```json")[1].split("```")[0].strip()
-                elif "```" in response:
-                    json_str = response.split("```")[1].split("```")[0].strip()
-                
-                team_data = json.loads(json_str)
-                
-                if not isinstance(team_data, list):
-                    raise ValueError("Expected JSON array of agents")
-                
-            except (json.JSONDecodeError, ValueError) as e:
-                self._log(f"[yellow]Orchestrator: failed to parse replan team JSON: {e}[/yellow]")
-                # Save failed response for debugging
-                save_debug_output(state, f"failed_replan_team_response_iter_{state.current_iteration}", response, self._log)
-                
-                # Fallback to existing team
-                team_data = [{"role": a.role, "domain": a.domain, "goal": a.goal} for a in state.team_manifest]
-            
-            # Constraints
-            team_gen = state.config.get("orchestrator", {}).get("team_generation", {})
-            min_agents = team_gen.get("min_agents", 3)
-            max_agents = team_gen.get("max_agents", 5)
-            require_skeptic = team_gen.get("require_skeptic", True)
-            
-            # Enforce max_agents limit
-            if len(team_data) > max_agents:
-                team_data = team_data[:max_agents]
-            
-            # Check for skeptic
-            has_skeptic = any("skeptic" in str(a.get("role", "")).lower() for a in team_data)
-            if require_skeptic and not has_skeptic:
-                team_data.append({
-                    "role": "Skeptic",
-                    "domain": "Critical Analysis",
-                    "goal": "Challenge assumptions and identify risks"
-                })
-            
-            # Enforce min_agents
-            while len(team_data) < min_agents:
-                team_data.append({
-                    "role": f"Domain Expert {len(team_data)}",
-                    "domain": "General Analysis",
-                    "goal": "Provide additional perspective"
-                })
-            
-            # Convert to AgentConfig
-            team = []
-            for agent_data in team_data:
-                role = agent_data.get("role", "Expert")
-                domain = agent_data.get("domain", "General")
-                goal = agent_data.get("goal", "Analyze the topic")
-                
-                system_prompt = self._generate_system_prompt(role, domain, goal)
-                
-                from engine.utils.config import get_agent_providers, get_provider_config
-                agent_providers = get_agent_providers(state.config)
-                agent_cfg = agent_providers.get("default", {})
-                agent_prov = agent_cfg.get("provider")
-                
-                prov_cfg = get_provider_config(state.config, agent_prov)
-                agent_model = prov_cfg.get("default_model", "gpt-4o")
-                
-                team.append(AgentConfig(
-                    role=role,
-                    domain=domain,
-                    goal=goal,
-                    system_prompt=system_prompt,
-                    provider=agent_prov,
-                    model=agent_model,
-                    temperature=agent_cfg.get("temperature", 0.7) if "skeptic" not in role.lower() else 0.8
-                ))
-            
-            self._log(f"Team: {', '.join(a.role for a in team)}")
-            self._log(format_team_pane(team_data))
+            team = self._parse_and_configure_team(response, state)
             
             return {
                 "team_manifest": team,
@@ -304,6 +147,70 @@ class OrchestratorNode:
         finally:
             self._update_status("ORCHESTRATOR", "idle")
 
+    def _parse_and_configure_team(self, response: str, state: ResearchState) -> List[AgentConfig]:
+        """
+        Shared logic for parsing LLM response into a list of AgentConfig objects.
+        """
+        # Parse JSON response
+        try:
+            # Extract JSON from response (handle potential markdown code blocks)
+            json_str = response
+            if "```json" in response:
+                json_str = response.split("```json")[1].split("```")[0].strip()
+            elif "```" in response:
+                json_str = response.split("```")[1].split("```")[0].strip()
+            
+            team_data = json.loads(json_str)
+            
+            if not isinstance(team_data, list):
+                raise ValueError("Expected JSON array of agents")
+            
+        except (json.JSONDecodeError, ValueError) as e:
+            self._log(f"[red]Orchestrator: failed to parse team JSON: {e}[/red]")
+            # Save failed response for debugging
+            save_debug_output(state, f"failed_team_response_iter_{state.current_iteration}", response, self._log)
+            # Fail the application
+            raise ValueError(f"Failed to parse team JSON from Orchestrator: {e}")
+
+        # Get team generation constraints
+        team_gen = state.config.get("orchestrator", {}).get("team_generation", {})
+        max_agents = team_gen.get("max_agents", 5)
+        
+        # Enforce max_agents limit
+        if len(team_data) > max_agents:
+            team_data = team_data[:max_agents]
+        
+        # Convert to AgentConfig objects with generated system prompts
+        from engine.utils.config import get_agent_providers, get_provider_config
+        agent_providers = get_agent_providers(state.config)
+        agent_cfg = agent_providers.get("default", {})
+        agent_prov = agent_cfg.get("provider")
+        prov_cfg = get_provider_config(state.config, agent_prov)
+        agent_model = prov_cfg.get("default_model", "gpt-4o")
+
+        team = []
+        for agent_data in team_data:
+            role = agent_data.get("role", "Expert")
+            domain = agent_data.get("domain", "General")
+            goal = agent_data.get("goal", "Analyze the topic")
+            
+            # Generate system prompt for this role
+            system_prompt = self._generate_system_prompt(role, domain, goal)
+            
+            team.append(AgentConfig(
+                role=role,
+                domain=domain,
+                goal=goal,
+                system_prompt=system_prompt,
+                provider=agent_prov,
+                model=agent_model,
+                temperature=agent_cfg.get("temperature", 0.7) if "skeptic" not in role.lower() else 0.8
+            ))
+        
+        self._log(f"Team: {', '.join(a.role for a in team)}")
+        self._log(format_team_pane(team_data))
+        
+        return team
     
     def _generate_system_prompt(self, role: str, domain: str, goal: str) -> str:
         """Generate a system prompt for an agent based on its configuration."""

@@ -48,7 +48,7 @@ Expertise Guidelines:
 5. Acknowledge limitations of your perspective when appropriate
 
 When analyzing a topic:
-- Provide 2-3 concise paragraphs of analysis
+- Provide critical insights backed by informative evidences
 - Stay within your domain expertise
 - Avoid generalizations outside your field
 - Highlight domain-specific implications
@@ -56,7 +56,7 @@ When analyzing a topic:
 Respond as a {role} would, with appropriate depth and perspective."""
 
 
-DRAFT_REPORT_PROMPT = """You are the Research Director creating a consolidated Research Report.
+DRAFT_REPORT_PROMPT = """You are the Research Director creating a draft research report, consolidating materials from domain exports. 
 
 Topic: {topic}
 Iteration: {iteration}
@@ -64,11 +64,11 @@ Iteration: {iteration}
 Research Outputs from Domain Experts:
 {research_outputs}
 
-Your task is to synthesize these findings into a single JSON object.
+Your task is to synthesize these findings end output to a single JSON object.
 
 The JSON MUST follow this structure:
 {{
-  "draft_report": "# Markdown formatted report content here...",
+  "draft_report": "# Markdown formatted report with appendix here...",
   "key_takeaways": [
     "takeaway 1",
     "takeaway 2",
@@ -78,16 +78,15 @@ The JSON MUST follow this structure:
 
 ### Guidelines for 'draft_report':
 1. Use professional Markdown formatting.
-2. Structure: Executive Summary, Background & Context, Key Findings (themed), Critical Analysis (Agreement/Conflict/Risk), Recommendations, and Knowledge Gaps.
+2. Main report structure: Executive Summary, Background & Context, Key Findings (themed), Conclusions
 3. Synthesize viewpoints; do not list "Agent A said...".
-4. Explicitly acknowledge conflicts and gaps.
+4. Explicitly acknowledge conflicts and gaps, of views from domain experts.
 5. Accommodate experts' views rather than imposing your own.
 
 ### Guidelines for 'key_takeaways':
-1. Provide 3-5 high-level, actionable summary points.
-2. Focus on core findings and critical tensions.
+1. Provide 3-6 high-level, summary and actionable points based on the Main report and Appendix, for next iteration of research if necessary.
+2. Focus on core findings and further research.
 
-CRITICAL: Output ONLY the JSON object. Do not include any text before or after the JSON.
 """
 
 EVALUATE_CONSENSUS_PROMPT = """You are the Research Director evaluating the current state of a report.
@@ -118,10 +117,12 @@ If "IN_PROGRESS", the updated draft will be fed into the next iteration.
 If "REACHED", the updated draft will be polished by the Synthesizer for the final report.
 
 ### Guidelines for 'updated_draft':
+### Guidelines for 'draft_report':
 1. Use professional Markdown formatting.
-2. Structure: Executive Summary, Background & Context, Key Findings (themed), Critical Analysis (Agreement/Conflict/Risk), Recommendations, and Knowledge Gaps.
+2. Main report structure: Executive Summary, Background & Context, Key Findings (themed), Conclusions
+3. Appendix for further research, if applicable: Critical Analysis (Agreement/Conflict/Risk), Recommendations, and Knowledge Gaps.
 3. Synthesize viewpoints; do not list "Agent A said...".
-4. Explicitly acknowledge conflicts and gaps.
+4. Explicitly acknowledge conflicts and gaps, of views from domain experts.
 5. Accommodate experts' views rather than imposing your own.
 6. Incorporate actionable insights and corrections from the critiques.
 
@@ -175,12 +176,11 @@ Output ONLY a valid JSON array. Example format:
 
 AGENT_RESEARCH_PROMPT = """Topic: {topic}
 
-Your Role: {role}
-Your Domain: {domain}
-Your Goal: {goal}
-{draft_context}
-Provide your expert analysis of this topic from your specific domain perspective.
-Focus only on aspects within your expertise. Be concise but thorough.
+Context: ```{draft_context}```
+
+Provide your knowledge as well as analysis of this topic from your specific domain perspective.
+Focus on aspects within your expertise.
+Provide facts, numbers and other references along with your insights and analysis.
 
 OUTPUT FORMAT:
 Return your response as a valid JSON object with the following structure:
@@ -255,7 +255,8 @@ LATEST DRAFT REPORT (Orchestrator's comprehensive synthesis):
 
 ---
 
-Write a professional FINAL REPORT with the following structure:
+Write a professional FINAL REPORT.
+Consider the following aspects when drafting. 
 
 # Executive Summary
 - Key findings and recommendations (2-3 paragraphs)
@@ -269,8 +270,6 @@ Write a professional FINAL REPORT with the following structure:
 - Organized by theme
 - Synthesize convergent viewpoints
 - Highlight important divergences
-
-# Critical Analysis
 - Major points of agreement
 - Areas of legitimate debate
 - Risks and uncertainties
@@ -283,8 +282,9 @@ Write a professional FINAL REPORT with the following structure:
 
 Guidelines:
 - Start from the draft report as your baseline
-- The draft report already incorporates domain experts' research and critiques
+- The draft report already incorporates domlain experts' research and critiques
 - Ensure the language evaluates all topics consistently and reads cohesively
+- Refrain from using excessive bullet points
 - Write in a unified voice
 - Be comprehensive but concise
 - Use professional academic/business tone
