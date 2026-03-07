@@ -60,7 +60,7 @@ Respond as a {role} would, with appropriate depth and perspective."""
 
 
 DRAFT_REPORT_SYSTEM_PROMPT = """You are the Research Director creating a draft research report, consolidating materials from domain experts. 
-Your task is to synthesize these findings and output with relevant infomration in a single JSON object."""
+Your task is to synthesize these findings and output with relevant information in a single JSON object."""
 
 DRAFT_REPORT_PROMPT = """Topic: {topic}
 Iteration: {iteration}
@@ -68,7 +68,7 @@ Iteration: {iteration}
 Research Outputs from Domain Experts:
 {research_outputs}
 
-Your task is to synthesize these findings end output to a single JSON object.
+Your task is to synthesize these findings and output to a single JSON object.
 
 The JSON MUST follow this structure:
 {{
@@ -123,7 +123,6 @@ If "IN_PROGRESS", the updated draft will be fed into the next iteration.
 If "REACHED", the updated draft will be polished by the Synthesizer for the final report.
 
 ### Guidelines for 'updated_draft':
-### Guidelines for 'draft_report':
 1. Use professional Markdown formatting.
 2. Main report structure: Executive Summary, Background & Context, Key Findings (themed), Conclusions
 3. Appendix for further research, if applicable: Critical Analysis (Agreement/Conflict/Risk), Recommendations, and Knowledge Gaps.
@@ -187,6 +186,7 @@ Context: ```{draft_context}```
 
 Provide your knowledge as well as analysis of this topic from your specific domain perspective.
 Focus on aspects within your expertise.
+If you have tools provided, use them when necessary to ground your insights with current information.
 Provide facts, numbers and other references along with your insights and analysis.
 
 OUTPUT FORMAT:
@@ -292,6 +292,7 @@ Guidelines:
 - Ensure the language evaluates all topics consistently and reads cohesively
 - Refrain from using excessive bullet points
 - Write in a unified voice
+- Do not mention the work as "research". Use "report" instead if necessary. 
 - Be comprehensive but concise
 - Use professional academic/business tone
 """

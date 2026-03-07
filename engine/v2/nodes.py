@@ -199,6 +199,10 @@ class OrchestratorNode:
         prov_cfg = get_provider_config(state.config, agent_prov)
         agent_model = prov_cfg.get("default_model", "gpt-4o")
 
+        # Get research configuration
+        research_cfg = state.config.get("research", {})
+        web_search_enabled = research_cfg.get("web_search", {}).get("enabled", False)
+
         team = []
         for agent_data in team_data:
             role = agent_data.get("role", "Expert")
@@ -215,7 +219,8 @@ class OrchestratorNode:
                 system_prompt=system_prompt,
                 provider=agent_prov,
                 model=agent_model,
-                temperature=agent_cfg.get("temperature", 0.7) if "skeptic" not in role.lower() else 0.8
+                temperature=agent_cfg.get("temperature", 0.7) if "skeptic" not in role.lower() else 0.8,
+                search_enabled=web_search_enabled
             ))
         
         self._log(f"Team: {', '.join(a.role for a in team)}")
@@ -445,12 +450,18 @@ class AgentNode:
                 draft_context=draft_ctx
             )
             
+            tools = []
+            if self.config.search_enabled:
+                from engine.tools.search import get_search_tool
+                tools = [get_search_tool(state.config)]
+            
             response = await self.llm_client.complete(
                 prompt=prompt,
                 system_prompt=self.config.system_prompt,
                 provider=self.config.provider,
                 model=self.config.model,
                 temperature=self.config.temperature,
+                tools=tools if tools else None
             )
             
             output_key = self.config.role

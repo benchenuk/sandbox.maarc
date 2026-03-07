@@ -30,6 +30,10 @@ DEFAULT_CONFIG = {
         "min_iterations": 3,
         "max_iterations": 10,
         "consensus_threshold": 0.85,
+        "web_search": {
+            "enabled": True,
+            "max_results": 5,
+        },
     },
     "orchestrator": {
         "provider": "litellm_proxy",

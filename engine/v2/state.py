@@ -34,6 +34,7 @@ class AgentConfig(BaseModel):
     provider: str = ""
     model: str = "gpt-4o"
     temperature: float = 0.7
+    search_enabled: bool = False
     
     @field_validator('role')
     @classmethod

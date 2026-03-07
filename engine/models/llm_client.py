@@ -6,7 +6,7 @@ Supports any provider with OpenAI-compatible endpoints (LiteLLM, Ollama, etc.)
 
 import logging
 import os
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 # Remove global console and basicConfig that write to stdout/stderr
 logger = logging.getLogger("engine.llm")
@@ -14,6 +14,7 @@ logger = logging.getLogger("engine.llm")
 try:
     from langchain_openai import ChatOpenAI
     from langchain_core.rate_limiters import InMemoryRateLimiter
+    from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage, AIMessage
     LANGCHAIN_AVAILABLE = True
 except ImportError:
     LANGCHAIN_AVAILABLE = False
@@ -102,10 +103,11 @@ class LLMClient:
         self,
         prompt: str,
         system_prompt: Optional[str] = None,
-        provider: str = None,
-        model: str = None,
+        provider: Optional[str] = None,
+        model: Optional[str] = None,
         temperature: float = 0.7,
         max_tokens: int = 2000,
+        tools: Optional[List[Any]] = None,
     ) -> str:
         """
         Make a completion request via LangChain (OpenAI-compatible).
@@ -117,6 +119,7 @@ class LLMClient:
             model: Model to use. Uses provider's default_model if None.
             temperature: Temperature setting
             max_tokens: Max tokens to generate
+            tools: Optional list of tools to bind to the LLM
 
         Returns:
             Generated text response
@@ -136,34 +139,55 @@ class LLMClient:
         logger.info(f"[dim]API call: model={model}, temp={temperature}[/dim]")
 
         llm = self._get_llm(provider, model, temperature, max_tokens)
+        
+        if tools:
+            llm = llm.bind_tools(tools)
 
         messages = []
-        from langchain_core.messages import HumanMessage, SystemMessage
         if system_prompt:
             messages.append(SystemMessage(content=system_prompt))
         messages.append(HumanMessage(content=prompt))
 
         try:
-            response = await llm.agenerate([messages])
-            logger.debug(f"Raw response: {response}")
+            # Recursive tool execution loop (simple 1-level for now)
+            max_tool_iters = 3
+            current_iter = 0
             
-            # Handle different response formats
-            gen_list = response.generations
-            if not gen_list or not gen_list[0]:
-                raise ValueError("Empty generations in response")
-            
-            generation = gen_list[0][0]
-            logger.debug(f"Generation object: {generation}, type: {type(generation)}")
-            
-            # Try multiple extraction methods
-            if hasattr(generation, 'text'):
-                result = generation.text
-            elif isinstance(generation, tuple):
-                result = generation[0]
-            else:
-                result = str(generation)
+            while current_iter < max_tool_iters:
+                response_msg = await llm.ainvoke(messages)
+                messages.append(response_msg)
                 
-            # Ensure result is a string
+                tool_calls = getattr(response_msg, "tool_calls", [])
+                if not tool_calls:
+                    break
+                
+                # Execute tools
+                for tool_call in tool_calls:
+                    tool_name = tool_call["name"]
+                    tool_args = tool_call["args"]
+                    
+                    logger.info(f"[cyan]Executing tool:[/cyan] {tool_name} with {tool_args}")
+                    
+                    # Find and execute tool
+                    tool_output = "Error: Tool not found"
+                    if tools:
+                        for t in tools:
+                            if t.name == tool_name:
+                                try:
+                                    tool_output = t.invoke(tool_args)
+                                except Exception as te:
+                                    tool_output = f"Error executing tool: {str(te)}"
+                                break
+                    
+                    messages.append(ToolMessage(
+                        content=str(tool_output),
+                        tool_call_id=tool_call["id"]
+                    ))
+                
+                current_iter += 1
+
+            result = messages[-1].content
+            
             if not isinstance(result, str):
                 result = str(result)
                 
