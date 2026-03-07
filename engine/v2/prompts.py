@@ -9,9 +9,12 @@ Prompt engineering is key to research quality - edit these to refine agent behav
 # ORCHESTRATOR PROMPTS
 # =============================================================================
 
-TEAM_GENERATION_PROMPT = """You are a Research Director.
+TEAM_GENERATION_SYSTEM_PROMPT = """You are a Research Director.
 
-Analyze the following research topic and determine what expert perspectives are needed for a comprehensive analysis:
+Your task is to conduct research with a given topic. You need to determine what expert perspectives are needed for a comprehensive analysis.
+You MUST output ONLY a valid JSON array."""
+
+TEAM_GENERATION_PROMPT = """Analyze the following research topic and determine what expert perspectives are needed for a comprehensive analysis:
 
 TOPIC: "{topic}"
 
@@ -56,9 +59,10 @@ When analyzing a topic:
 Respond as a {role} would, with appropriate depth and perspective."""
 
 
-DRAFT_REPORT_PROMPT = """You are the Research Director creating a draft research report, consolidating materials from domain exports. 
+DRAFT_REPORT_SYSTEM_PROMPT = """You are the Research Director creating a draft research report, consolidating materials from domain experts. 
+Your task is to synthesize these findings and output with relevant infomration in a single JSON object."""
 
-Topic: {topic}
+DRAFT_REPORT_PROMPT = """Topic: {topic}
 Iteration: {iteration}
 
 Research Outputs from Domain Experts:
@@ -89,9 +93,11 @@ The JSON MUST follow this structure:
 
 """
 
-EVALUATE_CONSENSUS_PROMPT = """You are the Research Director evaluating the current state of a report.
+EVALUATE_CONSENSUS_SYSTEM_PROMPT = """You are the Research Director evaluating the current state of a report.
+Your task is to determine if consensus is reached or if another iteration is needed, AND to draft an updated report incorporating the critiques.
+You MUST output ONLY a valid JSON object."""
 
-Topic: {topic}
+EVALUATE_CONSENSUS_PROMPT = """Topic: {topic}
 Iteration: {iteration} of {max_iterations}
 Iterations Remaining: {iterations_remaining}
 
@@ -133,11 +139,12 @@ Output ONLY a valid JSON object in this format:
 }}
 """
 
-REPLAN_TEAM_PROMPT = """You are a Research Director.
+REPLAN_TEAM_SYSTEM_PROMPT = """You are a Research Director.
 
 We are entering a new iteration of research. You need to determine the team of experts needed to improve the current draft.
+You MUST output ONLY a valid JSON array."""
 
-Topic: {topic}
+REPLAN_TEAM_PROMPT = """Topic: {topic}
 Iteration: {iteration} of {max_iterations}
 Iterations Remaining: {iterations_remaining}
 
@@ -239,11 +246,10 @@ Return your response as a valid JSON object with the following structure:
 # SYNTHESIZER PROMPTS
 # =============================================================================
 
-FINAL_REPORT_PROMPT = """You are an expert Technical Writer and Research Synthesizer.
+FINAL_REPORT_SYSTEM_PROMPT = """You are an expert Technical Writer and Research Synthesizer.
+Your task: Write a polished FINAL REPORT based on the latest updated draft."""
 
-Your task: Write a polished FINAL REPORT based on the latest updated draft.
-
-TOPIC: {topic}
+FINAL_REPORT_PROMPT = """TOPIC: {topic}
 ITERATIONS: {iteration}
 CONSENSUS STATUS: {consensus_status}
 

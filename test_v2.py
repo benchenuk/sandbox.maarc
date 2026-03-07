@@ -235,6 +235,24 @@ async def test_orchestrator_fails_on_invalid_json(mock_config):
 
 
 @pytest.mark.asyncio
+async def test_orchestrator_fails_on_wrong_json_type(mock_config):
+    """Test that orchestrator raises ValueError when JSON is valid but wrong shape (e.g. list of strings)"""
+    mock_llm = MagicMock()
+    
+    # Mock response with list of strings instead of list of dicts
+    mock_response = json.dumps(["Role 1", "Role 2"])
+    mock_llm.complete = AsyncMock(return_value=mock_response)
+    
+    orchestrator = OrchestratorNode(mock_llm)
+    state = ResearchState(topic="Test", config=mock_config)
+    
+    with pytest.raises(ValueError, match="Expected JSON array to contain agent objects"):
+        await orchestrator.plan_team(state)
+    
+    print("\n✓ Orchestrator handles wrong JSON collection types gracefully")
+
+
+@pytest.mark.asyncio
 async def test_orchestrator_draft_report(mock_config):
     """Test Design B.2: Orchestrator creates comprehensive draft report"""
     mock_llm = MagicMock()

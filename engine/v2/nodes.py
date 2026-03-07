@@ -10,14 +10,19 @@ import re
 
 from engine.v2.state import ResearchState, AgentConfig
 from engine.v2.prompts import (
+    TEAM_GENERATION_SYSTEM_PROMPT,
     TEAM_GENERATION_PROMPT,
     AGENT_SYSTEM_PROMPT,
+    DRAFT_REPORT_SYSTEM_PROMPT,
     DRAFT_REPORT_PROMPT,
     AGENT_RESEARCH_PROMPT,
     AGENT_CRITIQUE_PROMPT,
     AGENT_CRITIQUE_DRAFT_PROMPT,
+    FINAL_REPORT_SYSTEM_PROMPT,
     FINAL_REPORT_PROMPT,
+    EVALUATE_CONSENSUS_SYSTEM_PROMPT,
     EVALUATE_CONSENSUS_PROMPT,
+    REPLAN_TEAM_SYSTEM_PROMPT,
     REPLAN_TEAM_PROMPT,
 )
 from engine.v2.formatting import format_team_pane, format_takeaways_pane, format_agent_summaries_pane
@@ -92,6 +97,7 @@ class OrchestratorNode:
             
             response = await self.llm_client.complete(
                 prompt=prompt,
+                system_prompt=TEAM_GENERATION_SYSTEM_PROMPT,
                 provider=orch_provider,
                 temperature=state.config.get("orchestrator", {}).get("temperature", 0.7),
                 max_tokens=1500
@@ -133,6 +139,7 @@ class OrchestratorNode:
             
             response = await self.llm_client.complete(
                 prompt=prompt,
+                system_prompt=REPLAN_TEAM_SYSTEM_PROMPT,
                 provider=orch_provider,
                 temperature=state.config.get("orchestrator", {}).get("temperature", 0.7),
                 max_tokens=1500
@@ -164,6 +171,10 @@ class OrchestratorNode:
             
             if not isinstance(team_data, list):
                 raise ValueError("Expected JSON array of agents")
+            
+            # Additional check: ensure elements are dictionaries
+            if any(not isinstance(agent, dict) for agent in team_data):
+                raise ValueError("Expected JSON array to contain agent objects, but found other types")
             
         except (json.JSONDecodeError, ValueError) as e:
             self._log(f"[red]Orchestrator: failed to parse team JSON: {e}[/red]")
@@ -241,6 +252,7 @@ class OrchestratorNode:
             
             draft = await self.llm_client.complete(
                 prompt=draft_prompt,
+                system_prompt=DRAFT_REPORT_SYSTEM_PROMPT,
                 provider=orch_provider,
                 temperature=0.4,  # Lower temp for consistent structure
                 max_tokens=2500
@@ -256,8 +268,15 @@ class OrchestratorNode:
                 json_str = json_match.group(1) if json_match else draft
                 
                 data = json.loads(json_str.strip())
-                report_content = data.get("draft_report", "")
-                takeaways = data.get("key_takeaways", [])
+                
+                # Robustness check: ensure 'data' is a dictionary
+                if isinstance(data, dict):
+                    report_content = data.get("draft_report", "")
+                    takeaways = data.get("key_takeaways", [])
+                else:
+                    self._log(f"[yellow]Orchestrator: LLM returned JSON {type(data).__name__} instead of dict. Attempting fallback.[/yellow]")
+                    report_content = draft
+                    takeaways = []
                 
                 if not report_content:
                     # Fallback if structure is wrong but text is there
@@ -324,6 +343,7 @@ class OrchestratorNode:
             
             response = await self.llm_client.complete(
                 prompt=prompt,
+                system_prompt=EVALUATE_CONSENSUS_SYSTEM_PROMPT,
                 provider=orch_provider,
                 temperature=0.3, # Low temp for precise formatting / evaluation
                 max_tokens=2500
@@ -338,6 +358,11 @@ class OrchestratorNode:
                     json_str = response.split("```")[1].split("```")[0].strip()
                 
                 evaluation = json.loads(json_str)
+                
+                # Robustness check: ensure 'evaluation' is a dictionary
+                if not isinstance(evaluation, dict):
+                     raise ValueError(f"Expected JSON object for evaluation, but got {type(evaluation).__name__}")
+                
                 decision = evaluation.get("decision", "IN_PROGRESS")
                 updated_draft = evaluation.get("updated_draft", state.draft_report)
                 
@@ -579,6 +604,7 @@ class SynthesisNode:
             # Generate report via LLM
             report_content = await self.llm_client.complete(
                 prompt=prompt,
+                system_prompt=FINAL_REPORT_SYSTEM_PROMPT,
                 provider=synth_provider,
                 temperature=synth_temp,
                 max_tokens=4000
