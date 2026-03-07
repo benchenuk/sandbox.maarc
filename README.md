@@ -21,6 +21,7 @@ MAARC is a terminal-based application that conducts deep research through iterat
   5. **Synthesis**: Dedicated Synthesizer agent produces the final polished report
 - **Human-in-the-Loop**: Approve/modify the agent team before research begins
 - **Multi-Model Support**: Agents can be sourced from a pool of LLM API provider, including local models.
+- **Autonomous Web Search**: Dynamic tool calling allows agents to ground their research with real-time web results from DuckDuckGo.
 - **Rich TUI**: Beautiful terminal interface with real-time agent status, phase tracking, and word-wrapped logs
 - **Markdown Reports**: Generate comprehensive research reports with optional development appendices
 
@@ -39,6 +40,9 @@ MAARC is a terminal-based application that conducts deep research through iterat
 │  (Critique) │    │  (Loop/End) │    │(Final Report)│
 └─────────────┘    └─────────────┘    └─────────────┘
 ```
+
+### Tool Calling & Grounding
+MAARC agents utilize **Autonomous Tool Calling** to interact with external data sources. When search is enabled, agents can dynamically decide to query the web for up-to-date facts. The engine implements an adapter pattern, allowing you to swap search providers (e.g., DuckDuckGo, SearXNG) through simple configuration.
 
 ## Installation
 
@@ -119,14 +123,25 @@ agents:
 
 ### Research Parameters
 
+Configure how the engine debates and reaches a conclusion:
+
 ```yaml
 research:
   max_iterations: 2        # Maximum debate cycles
   consensus_threshold: 0.85
   
+  web_search:
+    enabled: true        # Enable web search for agents
+    provider: duckduckgo # Current supported: duckduckgo
+    max_results: 5       # Max snippets per search
+```
+
+### Human-in-the-Loop
+
+```yaml
 human_in_the_loop:
   enabled: true            # Enable team approval prompt
-  
+
 output:
   directory: reports       # Where to save reports
 ```

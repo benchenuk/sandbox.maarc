@@ -186,7 +186,7 @@ Context: ```{draft_context}```
 
 Provide your knowledge as well as analysis of this topic from your specific domain perspective.
 Focus on aspects within your expertise.
-If you have tools provided, use them when necessary to ground your insights with current information.
+If you have tools provided, use them to ground your insights with current information.
 Provide facts, numbers and other references along with your insights and analysis.
 
 OUTPUT FORMAT:
